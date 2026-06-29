@@ -6,6 +6,14 @@ Trang thai:
 
 - De sau MVP.
 - Chi lam khi cac phase social/travel core da co du user/content.
+- Neu van muon giu chi phi 0, chi lam schema/API CRUD nhe, khong them paid AI/map/search service.
+
+Scale-later guardrails:
+
+- Itinerary/recommendation phai bat dau bang structured data va rule-based design.
+- AI chi la optional sau khi co du data va metric.
+- Route/cost estimate khong duoc phu thuoc bat buoc vao paid map API.
+- Recommendation module phai tach boundary rieng de sau nay co the tach service ma khong anh huong core modules.
 
 Khong lam trong phase nay:
 
@@ -359,4 +367,3 @@ Acceptance criteria:
 - Co design doc truoc khi code recommendation.
 - Khong bat dau bang AI/ML.
 - Cost/route hien thi la uoc tinh, khong cam ket chinh xac.
-

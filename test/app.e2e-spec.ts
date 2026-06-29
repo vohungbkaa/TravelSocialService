@@ -1,9 +1,64 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, HttpStatus } from '@nestjs/common';
-import request from 'supertest';
+import {
+  Body,
+  Controller,
+  HttpStatus,
+  INestApplication,
+  Post,
+  ValidationPipe,
+} from '@nestjs/common';
+import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
+import { HttpExceptionFilter } from './../src/common/filters/http-exception.filter';
+import { ConfigService } from '@nestjs/config';
+import { IsEmail, IsString, MinLength } from 'class-validator';
+import { Public } from './../src/common/decorators/public.decorator';
+
+class TestValidationDto {
+  @IsEmail({}, { message: 'Invalid email address' })
+  email: string;
+
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  password: string;
+}
+
+@Controller('test-validation')
+@Public()
+class TestValidationController {
+  @Post()
+  testValidation(@Body() body: TestValidationDto) {
+    return { success: true, data: body };
+  }
+}
+
+interface HealthBody {
+  data: {
+    status: string;
+    service: string;
+    timestamp: string;
+  };
+}
+
+interface ValidationSuccessBody {
+  success: boolean;
+  data: {
+    email: string;
+    password: string;
+  };
+}
+
+interface ErrorBody {
+  error: {
+    code: string;
+    message: string;
+    details?: {
+      errors?: string[];
+    };
+  };
+}
 
 describe('App (e2e)', () => {
   let app: INestApplication<App>;
@@ -16,6 +71,7 @@ describe('App (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
+      controllers: [TestValidationController],
     })
       .overrideProvider(PrismaService)
       .useValue(mockPrismaService)
@@ -23,12 +79,7 @@ describe('App (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api/v1');
-    // Register pipes and filters in tests as well to mirror main.ts
-    // In NestJS, e2e tests do not use main.ts, so we must register global filters/pipes manually in the test setup
-    const { ValidationPipe } = require('@nestjs/common');
-    const { HttpExceptionFilter } = require('./../src/common/filters/http-exception.filter');
-    const { ConfigService } = require('@nestjs/config');
-    
+
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -50,10 +101,11 @@ describe('App (e2e)', () => {
       .get('/api/v1/health')
       .expect(HttpStatus.OK)
       .expect((res) => {
-        expect(res.body).toHaveProperty('data');
-        expect(res.body.data.status).toBe('ok');
-        expect(res.body.data.service).toBe('travel-social-backend');
-        expect(res.body.data).toHaveProperty('timestamp');
+        const body = res.body as HealthBody;
+        expect(body).toHaveProperty('data');
+        expect(body.data.status).toBe('ok');
+        expect(body.data.service).toBe('travel-social-backend');
+        expect(body.data).toHaveProperty('timestamp');
       });
   });
 
@@ -66,9 +118,10 @@ describe('App (e2e)', () => {
           password: 'securepassword',
         })
         .expect(HttpStatus.CREATED)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('success', true);
-          expect(res.body.data).toEqual({
+        .expect((res: Response) => {
+          const body = res.body as ValidationSuccessBody;
+          expect(body).toHaveProperty('success', true);
+          expect(body.data).toEqual({
             email: 'valid@example.com',
             password: 'securepassword',
           });
@@ -83,16 +136,19 @@ describe('App (e2e)', () => {
           password: 'short',
         })
         .expect(HttpStatus.BAD_REQUEST)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('error');
-          expect(res.body.error).toEqual(
+        .expect((res: Response) => {
+          const body = res.body as ErrorBody;
+          expect(body).toHaveProperty('error');
+          expect(body.error).toEqual(
             expect.objectContaining({
               code: 'VALIDATION_ERROR',
               message: 'Validation failed',
             }),
           );
-          expect(res.body.error.details.errors).toContain('Invalid email address');
-          expect(res.body.error.details.errors).toContain('Password must be at least 6 characters long');
+          expect(body.error.details?.errors).toContain('Invalid email address');
+          expect(body.error.details?.errors).toContain(
+            'Password must be at least 6 characters long',
+          );
         });
     });
 
@@ -105,9 +161,12 @@ describe('App (e2e)', () => {
           extraField: 'not-allowed',
         })
         .expect(HttpStatus.BAD_REQUEST)
-        .expect((res) => {
-          expect(res.body.error.code).toBe('VALIDATION_ERROR');
-          expect(res.body.error.details.errors[0]).toContain('property extraField should not exist');
+        .expect((res: Response) => {
+          const body = res.body as ErrorBody;
+          expect(body.error.code).toBe('VALIDATION_ERROR');
+          expect(body.error.details?.errors?.[0]).toContain(
+            'property extraField should not exist',
+          );
         });
     });
   });

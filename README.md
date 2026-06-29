@@ -4,6 +4,21 @@ Dự án backend cho mạng xã hội du lịch sử dụng NestJS, Prisma ORM, 
 
 ---
 
+## Chi phí hạ tầng giai đoạn đầu
+
+Mục tiêu hiện tại là giữ chi phí hạ tầng bằng `0 USD/tháng`.
+
+Level 0 mặc định:
+
+- API: Render Free hoặc môi trường Node.js free tương đương.
+- Database: Supabase Free Postgres qua `DATABASE_URL`.
+- Media sau này: Cloudflare R2 Free tier.
+- Local development: Docker Compose chỉ dùng để chạy PostgreSQL local.
+
+Không cần Redis, Kafka, OpenSearch, Kubernetes, VPS hoặc paid database trong Phase 0.
+
+---
+
 ## 🛠️ Yêu cầu hệ thống
 * **Node.js**: >= 20.x (Khuyên dùng v20.19.1)
 * **Docker & Docker Compose**: Để khởi chạy PostgreSQL local.
@@ -13,33 +28,45 @@ Dự án backend cho mạng xã hội du lịch sử dụng NestJS, Prisma ORM, 
 ## 🚀 Hướng dẫn cài đặt và chạy dự án
 
 ### Bước 1: Cài đặt các package phụ thuộc
+* **Mục đích**: Tải và cài đặt toàn bộ thư viện bên thứ ba cần thiết (NestJS core, Prisma ORM, Bcrypt, JWT, Passport, class-validator, v.v.) vào thư mục `node_modules` để ứng dụng có thể chạy được.
 ```bash
 npm install
 ```
 
 ### Bước 2: Cấu hình biến môi trường (Environment Variables)
+* **Mục đích**: Tạo file `.env` lưu trữ các tham số cấu hình nhạy cảm và linh hoạt của hệ thống (như thông tin đăng nhập database `DATABASE_URL`, khóa bí mật JWT, cổng chạy cổng PORT, cấu hình Media R2, và tài khoản Admin mặc định) cục bộ trên máy mà không bị đẩy lên GitHub/GitLab.
 Sao chép file cấu hình mẫu `.env.example` thành `.env`:
 ```bash
 cp .env.example .env
 ```
-Mở file `.env` và tùy chỉnh các thông số kết nối Database, JWT Secrets hoặc Cloudflare R2 nếu cần thiết.
+Mở file `.env` mới tạo và tùy chỉnh các thông số phù hợp với môi trường của bạn.
 
 > [!NOTE]
-> File `.env` đã được cấu hình mặc định sẵn sàng để kết nối với container PostgreSQL cục bộ của Docker Compose.
+> File `.env.example` được thiết lập mặc định để kết nối với cơ sở dữ liệu PostgreSQL cục bộ. Khi triển khai production, bạn chỉ cần thay đổi các biến môi trường này (Ví dụ: dùng Supabase Free Postgres).
 
 ### Bước 3: Khởi động cơ sở dữ liệu (PostgreSQL)
-Chạy lệnh Docker Compose sau để khởi động cơ sở dữ liệu PostgreSQL cục bộ ở chế độ chạy ngầm (detached mode):
+* **Mục đích**: Khởi chạy hệ quản trị cơ sở dữ liệu PostgreSQL để cung cấp nơi lưu trữ và truy vấn dữ liệu cho ứng dụng (thông tin người dùng, token, địa danh, ảnh,...).
+Bạn có thể chọn một trong hai cách khởi động dưới đây tùy theo cách bạn cài đặt PostgreSQL:
+
+#### Cách A: Dùng Homebrew PostgreSQL local (Khuyên dùng cho macOS nếu không dùng Docker)
+Nếu bạn đã cài `postgresql@16` qua Homebrew, khởi động dịch vụ bằng lệnh:
+```bash
+brew services start postgresql@16
+```
+
+#### Cách B: Chạy qua Docker Compose
+Chạy lệnh Docker Compose sau để khởi động container PostgreSQL chạy ngầm:
 ```bash
 docker compose up -d postgres
 ```
-*Lưu ý: Database sẽ lắng nghe ở cổng mặc định `5432`.*
+*Lưu ý: PostgreSQL mặc định sẽ lắng nghe ở cổng `5432`.*
 
 ### Bước 4: Khởi tạo schema database với Prisma
-Sau khi Database đã chạy thành công, chạy lệnh tạo migration và khởi tạo dữ liệu mẫu:
+* **Mục đích**: Ánh xạ các cấu trúc bảng (models, relations, indexes) định nghĩa trong file `prisma/schema.prisma` vào cơ sở dữ liệu PostgreSQL để khởi tạo các bảng vật lý, đồng thời tự động biên dịch sinh ra bộ thư viện truy vấn dữ liệu type-safe (`Prisma Client`) tương ứng trong `node_modules`.
+Sau khi Database ở Bước 3 đã sẵn sàng, chạy lệnh sau:
 ```bash
 npm run prisma:migrate
 ```
-*Lệnh này sẽ tự động đọc `DATABASE_URL` trong file `.env`, tạo các bảng cần thiết và cập nhật Prisma Client.*
 
 ### Bước 5: Chạy ứng dụng
 
@@ -92,10 +119,21 @@ npm run test:cov
 
 ---
 
-## 🔒 Ghi chú về Môi trường Proxy MISA (Dành cho nhà phát triển local)
-Trong trường hợp bạn chạy dự án đằng sau proxy/firewall của MISA và bị lỗi timeout khi cài đặt/tải Prisma engine binaries (`binaries.prisma.sh`), file `.env` đã được thiết lập sẵn hai biến môi trường cục bộ để bypass:
+## Prisma engine offline/proxy note
+
+Các script Prisma trong `package.json` được giữ portable để chạy được trên macOS/Linux/Render:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:deploy
+```
+
+Trong trường hợp môi trường local bị chặn khi tải Prisma engine binaries (`binaries.prisma.sh`), có thể thêm tạm các biến sau vào `.env` nếu file engine tương ứng đã tồn tại trong `node_modules/@prisma/engines`:
+
 ```txt
 PRISMA_QUERY_ENGINE_LIBRARY=./node_modules/@prisma/engines/libquery_engine-darwin-arm64.dylib.node
 PRISMA_SCHEMA_ENGINE_BINARY=./node_modules/@prisma/engines/schema-engine-darwin-arm64
 ```
-Các scripts `prisma:generate`, `prisma:migrate`, `prisma:studio` trong `package.json` đã được nhúng sẵn hai biến này để đảm bảo chạy mượt mà ngay cả khi không có kết nối internet ra CDN của Prisma.
+
+Không hard-code các biến này vào `package.json`, vì deployment free trên Linux cần engine khác.

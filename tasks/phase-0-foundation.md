@@ -2,6 +2,14 @@
 
 Muc tieu phase nay la tao nen mong backend: NestJS project, config, database, validation, error format, Swagger, Docker local va health check.
 
+Level 0 cost guardrails:
+
+- Foundation phai chay duoc local va deploy duoc len Render Free.
+- Database target cua deploy free la Supabase Free Postgres qua `DATABASE_URL`.
+- Docker Compose chi dung cho local development, khong bat buoc production.
+- Khong them bat ky service runtime nao ngoai API va PostgreSQL.
+- Moi config phai di qua env de sau nay chuyen sang VPS/paid service ma khong sua code.
+
 Khong lam trong phase nay:
 
 - Khong implement business module ngoai health/config/database.
@@ -207,7 +215,7 @@ curl http://localhost:3000/api/v1/health
 
 Objective:
 
-- Cho developer chay PostgreSQL local bang Docker Compose.
+- Cho developer chay PostgreSQL local bang Docker Compose ma khong anh huong deployment free.
 
 Dependencies:
 
@@ -243,6 +251,8 @@ Acceptance criteria:
 - `docker compose up -d postgres` chay duoc.
 - Port 5432 expose local.
 - Database name/user/password khop `.env.example`.
+- Docker Compose duoc ghi ro la local-only.
+- App van deploy duoc bang external `DATABASE_URL` cua Supabase Free, khong phu thuoc container Postgres.
 
 Test/verification:
 
@@ -254,6 +264,7 @@ docker compose ps
 Notes for agent:
 
 - Khong them Redis trong phase nay.
+- Khong yeu cau VPS/Docker Compose cho Level 0 deploy.
 
 ## P0-T05 - Prisma setup
 
@@ -404,4 +415,3 @@ Test/verification:
 ```txt
 curl http://localhost:3000/docs
 ```
-

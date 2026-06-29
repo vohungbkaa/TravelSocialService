@@ -18,7 +18,9 @@ export default registerAs('app', () => ({
     publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
     endpoint: process.env.R2_ENDPOINT,
   },
-  corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173')
+  corsOrigins: (
+    process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173'
+  )
     .split(',')
     .map((origin) => origin.trim()),
 }));

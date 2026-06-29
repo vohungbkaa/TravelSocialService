@@ -85,7 +85,8 @@ Search: PostgreSQL full-text search
 Cache: Chua dung ban dau
 Queue: Chua dung ban dau hoac in-process job don gian
 API: REST + Swagger
-Deploy: Docker Compose tren VPS nho hoac Render free de demo
+Deploy Level 0: Render Free API + Supabase Free Postgres + Cloudflare R2 Free
+Deploy local: Docker Compose chi dung de chay PostgreSQL/dev
 Logging: Pino
 Validation: class-validator hoac Zod
 Auth: JWT access token + refresh token
@@ -347,15 +348,19 @@ POST  /users/me/avatar
 
 Trach nhiem:
 
+- Quan ly khu vuc ban do/du lich (`areas`) tuong thich voi TravelSocialWebApp.
 - Quan ly dia diem du lich dia phuong.
 - Category dia diem.
 - Thong tin tinh/thanh, quan/huyen.
 - Toa do dia ly.
 - Anh dai dien dia diem.
+- Noi dung editorial cho dia danh: summary, local tip, best time, price range.
+- Publish/unpublish dia danh de public map chi hien noi dung da duyet.
 - Review/rating tong hop.
 
 Bang lien quan:
 
+- `areas`
 - `places`
 - `place_categories`
 - `place_photos`
@@ -367,12 +372,17 @@ Bang lien quan:
 API ban dau:
 
 ```txt
+GET  /areas
+GET  /areas/:slug
+POST /admin/areas
+PATCH /admin/areas/:id
 GET  /places
 GET  /places/:id
 GET  /places/slug/:slug
 GET  /places/nearby
-POST /places
-PATCH /places/:id
+POST /admin/places
+PATCH /admin/places/:id
+PATCH /admin/places/:id/publish
 ```
 
 ### 5.4. Posts module
@@ -638,12 +648,35 @@ refresh_tokens
 
 ### 6.5. Places
 
+Web app hien tai can co `areas` de gioi han ban do theo khu vuc, vi du `tien-thang`, va `places` de render marker tren MapLibre.
+
 ```txt
-places
+areas
 - id uuid pk
 - name varchar
 - slug varchar unique
+- province_code varchar nullable
 - description text nullable
+- cover_url text nullable
+- center_lat decimal
+- center_lng decimal
+- default_radius_km decimal default 3
+- published boolean default false
+- created_at timestamptz
+- updated_at timestamptz
+```
+
+```txt
+places
+- id uuid pk
+- area_id uuid nullable fk areas.id
+- name varchar
+- slug varchar unique
+- summary text nullable
+- description text nullable
+- local_tip text nullable
+- best_time text nullable
+- price_range varchar nullable
 - category_id uuid fk place_categories.id
 - address text nullable
 - province_id uuid nullable
@@ -655,6 +688,10 @@ places
 - rating_avg decimal default 0
 - rating_count int default 0
 - post_count int default 0
+- cover_url text nullable
+- video_url text nullable
+- audio_url text nullable
+- sort_order int default 0
 - status enum(draft, published, hidden)
 - created_by uuid nullable
 - created_at timestamptz
@@ -983,7 +1020,7 @@ Video nen de phase sau vi can transcode, thumbnail va storage lon.
 
 ## 12. Cost control
 
-### 12.1. Giai doan demo
+### 12.1. Level 0 - Validation/Demo public ban dau
 
 ```txt
 Target cost: 0 USD / thang
@@ -991,17 +1028,20 @@ Target cost: 0 USD / thang
 
 Dung:
 
-- Render free hoac Railway trial cho API.
-- Supabase/Render Postgres free cho DB demo.
-- Cloudflare R2 free tier cho media.
+- Render Free cho API.
+- Supabase Free Postgres cho database.
+- Cloudflare R2 Free tier cho media.
+- Cloudflare/Vercel/Pages Free cho frontend/admin neu co.
+- Platform logs thay cho paid monitoring.
 
 Rui ro:
 
 - Cold start.
 - Gioi han database.
-- Khong on dinh cho production.
+- Gioi han CPU/RAM/connection.
+- Khong co SLA production nghiem tuc.
 
-### 12.2. Giai doan MVP public nho
+### 12.2. Level 1 - Khi co user dau tien va can on dinh hon
 
 ```txt
 Target cost: 5-10 USD / thang
@@ -1009,13 +1049,15 @@ Target cost: 5-10 USD / thang
 
 Dung:
 
-- 1 VPS nho.
-- Docker Compose.
-- PostgreSQL trong VPS.
-- Cloudflare R2.
+- Render Starter hoac 1 VPS nho.
+- Co the van giu Supabase Postgres neu chua can migrate.
+- Neu dung VPS, Docker Compose chay API/PostgreSQL.
+- Cloudflare R2 van tiep tuc dung.
 - Cloudflare DNS/CDN.
 
-### 12.3. Giai doan co user that
+Chi chuyen sang Level 1 khi Level 0 co dau hieu user that hoac cold start/free limit anh huong trai nghiem.
+
+### 12.3. Level 2 - Co user that va can reliability
 
 ```txt
 Target cost: 20-50 USD / thang
@@ -1031,6 +1073,52 @@ Dung:
 
 ## 13. Roadmap tong the
 
+### MVP path - Admin dang dia danh va client load public map
+
+Neu muc tieu truoc mat la admin dang thong tin dia danh va client `TravelSocialWebApp` load ve ban do public, chi can thi cong subset sau:
+
+```txt
+Phase 0 full - Foundation
+P1-T01 den P1-T06 - Auth/JWT toi thieu
+P1-T10 - Seed first admin user
+P5-T04 - Role guard
+P4-T00 - Area schema and admin CRUD
+P4-T01 - Place category schema and seed
+P4-T02 - Place schema
+P4-T03 - Admin create/update/publish place
+P4-T04 - Public area/place list APIs
+P4-T06A - Admin place images and external media URLs
+```
+
+Khong can lam ngay:
+
+```txt
+Media upload R2
+Posts/social feed
+Reviews
+Advanced search
+Realtime notification
+Itinerary recommendation
+```
+
+Chi phi Level 0 van bang 0:
+
+- Auth tu host trong NestJS + PostgreSQL.
+- Database dung Supabase Free Postgres hoac PostgreSQL local khi dev.
+- Backend deploy Render Free.
+- Map frontend dung MapLibre/OpenFreeMap.
+- Admin chon toa do bang MapLibre click hoac nhap lat/lng.
+- Backend khong goi paid geocoding/map API.
+- Media dia danh ban dau dung URL ngoai/public path; upload binary de sau qua R2 presigned URL.
+
+Duong nang cap khi co user that:
+
+- Them audit log cho admin actions.
+- Them area-level permission neu co nhieu admin.
+- Them Cloudflare R2 upload cho anh dia danh.
+- Them PostGIS khi can nearby/radius query chinh xac.
+- Them cache/CDN cho public area/place response khi traffic tang.
+
 ### Phase 0 - Foundation
 
 Muc tieu: Khoi tao backend chuan, co auth, database, config va API docs.
@@ -1041,8 +1129,9 @@ Ket qua:
 - PostgreSQL ket noi qua Prisma.
 - Auth co register/login.
 - Swagger.
-- Docker Compose local.
+- Docker Compose local, khong bat buoc production.
 - Health check.
+- San sang deploy Render Free bang external `DATABASE_URL`.
 
 ### Phase 1 - Social MVP
 
@@ -1063,8 +1152,10 @@ Muc tieu: Them dia diem du lich va gan bai viet vao dia diem.
 
 Ket qua:
 
+- Areas cho ban do public/admin.
 - Places.
 - Place categories.
+- Admin tao/sua/publish dia danh voi lat/lng.
 - Reviews.
 - Search co ban.
 - Place feed.
@@ -1093,6 +1184,8 @@ Ket qua:
 - Realtime notification.
 - Better feed ranking.
 - Search engine neu can.
+
+Ghi chu: Phase 4 chi bat dau khi da co user/traffic that. Cac thanh phan Redis, queue, realtime va search engine khong thuoc Level 0.
 
 ### Phase 5 - Smart itinerary recommendation
 
@@ -1399,6 +1492,7 @@ GET  /transport/estimate?fromPlaceId=&toPlaceId=&mode=
 
 Nhung task nen lam som vi chi phi thap va giup du lieu dung:
 
+- Admin tao area/place voi lat/lng chuan, vi day la nen tang cua public map va itinerary.
 - Bat buoc post co the gan `primary_place_id`.
 - Places co category, province, district, lat/lng.
 - Reviews co rating va optional `cost_per_person`.
@@ -2466,10 +2560,11 @@ Acceptance criteria:
 
 Muc tieu:
 
-- Co huong dan deploy chi phi thap.
+- Co huong dan deploy chi phi thap cho Level 1, chi dung sau khi Level 0 co user/traction.
 
 Viec can lam:
 
+- Ghi ro day khong phai deployment mac dinh ban dau.
 - Document tao VPS.
 - Cai Docker.
 - Cau hinh env.
@@ -2486,7 +2581,7 @@ Acceptance criteria:
 
 Muc tieu:
 
-- Giam rui ro mat data.
+- Giam rui ro mat data khi bat dau co user that.
 
 Viec can lam:
 
@@ -2494,6 +2589,7 @@ Viec can lam:
 - Luu backup local hoac R2.
 - Cron job daily.
 - Document restore.
+- Voi Level 0 Supabase Free, document cach export/backup thu cong truoc; cron/VPS backup de Level 1/2.
 
 Acceptance criteria:
 
@@ -2566,7 +2662,8 @@ Thu tu thuc hien de ra MVP nhanh:
 
 ### 17.5. Deployment
 
-- Chon free platform de demo hay VPS 5-10 USD/thang?
+- Mac dinh Level 0: Render Free + Supabase Free + Cloudflare R2 Free.
+- Khi nao du dieu kien chuyen sang VPS/paid service?
 - Co domain chua?
 - Co can CI/CD tu GitHub Actions khong?
 
@@ -2582,7 +2679,8 @@ Cloudflare R2
 REST API
 Swagger
 Docker Compose local
-VPS nho khi public MVP
+Render Free cho Level 0 deploy
+Supabase Free Postgres cho Level 0 database
 ```
 
 Chua nen dung:

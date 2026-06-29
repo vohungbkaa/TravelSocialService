@@ -2,11 +2,20 @@
 
 Muc tieu phase nay la them like, save, follow, comments va feed MVP.
 
+Level 0 cost guardrails:
+
+- Feed MVP phai query truc tiep tu PostgreSQL voi index tot, khong dung Redis/cache server rieng.
+- Notification trong phase nay chi tao data neu da co service sau, khong realtime, khong WebSocket.
+- Khong them queue/worker de cap nhat counters; dung transaction PostgreSQL.
+- Khong them recommendation/ML feed.
+- Moi query danh sach phai co cursor pagination va limit de bao ve free database.
+
 Khong lam trong phase nay:
 
 - Khong personalized ML feed.
 - Khong Redis cache.
 - Khong realtime notification.
+- Khong background worker/queue.
 
 ## P3-T01 - Comment schema
 
@@ -472,4 +481,3 @@ Acceptance criteria:
 - Feed query dung indexes author/status/createdAt.
 - Query local voi data seed khong cham bat thuong.
 - Khong them Redis de giai quyet van de o phase nay.
-

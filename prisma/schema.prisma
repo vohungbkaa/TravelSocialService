@@ -7,10 +7,151 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum PlaceStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+
+enum PriceLevel {
+  FREE
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
+  id           String       @id @default(uuid())
+  email        String?      @unique
+  phone        String?      @unique
+  username     String       @unique
+  passwordHash String?
+  status       UserStatus   @default(ACTIVE)
+  role         UserRole     @default(USER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  profile      UserProfile?
+  refreshTokens RefreshToken[]
+  places       Place[]
+}
+
+model UserProfile {
+  userId          String   @id
+  displayName     String
+  bio             String?
+  avatarMediaId   String?
+  coverMediaId    String?
+  homeProvinceId  String?
+  websiteUrl      String?
+  postCount       Int      @default(0)
+  followerCount   Int      @default(0)
+  followingCount  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+}
+
+model Area {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  provinceCode    String?
+  description     String?
+  coverUrl        String?
+  centerLat       Decimal
+  centerLng       Decimal
+  defaultRadiusKm Decimal  @default(3)
+  published       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  places          Place[]
+}
+
+model PlaceCategory {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  places      Place[]
+}
+
+model Place {
+  id                          String      @id @default(uuid())
+  areaId                      String?
+  name                        String
+  slug                        String      @unique
+  summary                     String?
+  description                 String?
+  localTip                    String?
+  bestTime                    String?
+  priceRange                  String?
+  categoryId                  String
+  address                     String?
+  provinceCode                String?
+  districtCode                String?
+  wardCode                    String?
+  latitude                    Decimal?
+  longitude                   Decimal?
+  ratingAvg                   Decimal     @default(0)
+  ratingCount                 Int         @default(0)
+  postCount                   Int         @default(0)
+  priceLevel                  PriceLevel?
+  estimatedMinCost            Int?
+  estimatedMaxCost            Int?
+  averageVisitDurationMinutes Int?
+  openingHours                Json?
+  coverUrl                    String?
+  videoUrl                    String?
+  audioUrl                    String?
+  sortOrder                   Int         @default(0)
+  status                      PlaceStatus @default(DRAFT)
+  createdBy                   String?
+  createdAt                   DateTime    @default(now())
+  updatedAt                   DateTime    @updatedAt
+  area                        Area?       @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  category                    PlaceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  creator                     User?       @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  images                      PlaceImage[]
+
+  @@index([areaId, sortOrder])
+  @@index([categoryId])
+  @@index([provinceCode])
+  @@index([status, createdAt])
+}
+
+model PlaceImage {
   id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
+  placeId   String
+  imageUrl  String
+  caption   String?
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
 }

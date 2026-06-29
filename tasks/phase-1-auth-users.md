@@ -2,6 +2,15 @@
 
 Muc tieu phase nay la co dang ky, dang nhap, refresh token, auth guard va profile user.
 
+Level 0 cost guardrails:
+
+- Auth phai tu host trong NestJS + PostgreSQL, khong dung paid auth provider.
+- Khong dung Supabase Auth cho core auth de tranh lock-in va giu business logic trong backend.
+- Khong gui email bat buoc trong MVP vi email provider co the phat sinh chi phi.
+- Refresh token luu trong PostgreSQL, khong yeu cau Redis/session store.
+- OAuth/social login de phase sau, khong lam neu chua validate user.
+- Admin dang dia danh chi can email/password + role `ADMIN`/`SUPER_ADMIN`, khong can email verification trong MVP.
+
 Khong lam trong phase nay:
 
 - Khong OAuth Google/Facebook/Apple.
@@ -498,3 +507,57 @@ Acceptance criteria:
 - User not found tra 404.
 - Khong tra email neu policy public khong can email.
 
+## P1-T10 - Seed first admin user for free MVP
+
+Objective:
+
+- Tao tai khoan admin dau tien de dung admin API trong MVP ma khong can paid auth provider hay admin console phuc tap.
+
+Dependencies:
+
+- P1-T01.
+- P1-T02.
+
+Expected files:
+
+```txt
+prisma/seed.ts hoac src/scripts/seed-admin.ts
+package.json
+.env.example
+```
+
+Environment variables:
+
+```txt
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_USERNAME=admin
+SEED_ADMIN_PASSWORD=change-me-now
+SEED_ADMIN_DISPLAY_NAME=Administrator
+```
+
+Implementation steps:
+
+1. Tao seed script idempotent.
+2. Doc admin email/username/password tu env.
+3. Validate password khong rong va khong dung default trong production.
+4. Hash password bang cung algorithm voi Register API.
+5. Neu admin da ton tai:
+   - khong tao duplicate.
+   - co the update role len `ADMIN` neu email khop va policy cho phep.
+6. Tao `User` role `ADMIN`, status `ACTIVE`.
+7. Tao `UserProfile` neu chua co.
+8. Them script `db:seed-admin`.
+9. Cap nhat `.env.example`.
+
+Acceptance criteria:
+
+- Chay seed nhieu lan khong duplicate.
+- Admin login duoc bang API login.
+- Khong can Supabase Auth.
+- Khong can paid email provider.
+- Script khong in password ra log.
+
+Scale-later notes:
+
+- Khi co user that, thay seed-only flow bang admin management UI/API co audit log.
+- Co the them email verification/2FA sau, khong bat buoc Level 0.

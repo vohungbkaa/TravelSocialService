@@ -1,9 +1,9 @@
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     stack?: string;
   };
 }

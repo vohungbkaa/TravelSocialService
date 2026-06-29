@@ -2,6 +2,15 @@
 
 Muc tieu phase nay la them notification stored, admin moderation co ban va deployment 0 USD.
 
+Level 0 cost guardrails:
+
+- Notification chi la stored notification trong PostgreSQL, khong realtime/WebSocket.
+- Admin/moderation chay trong cung NestJS app, khong tach admin service rieng.
+- Deployment mac dinh la Render Free + Supabase Free Postgres + Cloudflare R2 Free.
+- Dockerfile de portability, nhung khong bat buoc VPS/paid container hosting.
+- Monitoring mac dinh dung platform logs; Sentry chi optional free tier.
+- RoleGuard phai dung role trong JWT/database, khong phu thuoc paid IAM/auth provider.
+
 Khong lam trong phase nay:
 
 - Khong realtime WebSocket.
@@ -118,6 +127,7 @@ Acceptance criteria:
 Objective:
 
 - Bao ve admin APIs.
+- Bat buoc cho MVP path admin dang dia danh.
 
 Dependencies:
 
@@ -136,11 +146,18 @@ Implementation steps:
 2. Tao `RolesGuard`.
 3. Guard doc role tu current user/JWT.
 4. Ap dung cho admin routes.
+5. Dam bao route `/api/v1/admin/areas` va `/api/v1/admin/places` chi cho `ADMIN`/`SUPER_ADMIN`.
 
 Acceptance criteria:
 
 - USER vao admin route tra 403.
 - ADMIN/SUPER_ADMIN vao duoc.
+- Khong can paid auth provider.
+
+Scale-later notes:
+
+- Khi co nhieu admin, them audit log va area-level permission.
+- Khi co production traffic, can nhac 2FA/email verification sau, khong bat buoc Level 0.
 
 ## P5-T05 - Report schema and create report API
 
@@ -448,4 +465,3 @@ Acceptance criteria:
 
 - CI pass tren clean checkout.
 - Khong can secret cho CI basic.
-
