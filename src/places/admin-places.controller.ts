@@ -120,4 +120,43 @@ export class AdminPlacesController {
     const data = await this.placesService.updateMediaLinks(id, updateMediaDto);
     return { data };
   }
+
+  @Get()
+  @ApiOperation({ summary: 'List all places (admin)' })
+  @ApiResponse({ status: 200, description: 'List of all places returned' })
+  async findAll() {
+    const data = await this.placesService.findAllAdmin();
+    return { data };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get details of a place (admin)' })
+  @ApiResponse({ status: 200, description: 'Place details returned' })
+  @ApiResponse({ status: 404, description: 'Place not found' })
+  async findOne(@Param('id') id: string) {
+    const data = await this.placesService.findOneAdmin(id);
+    return { data };
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a place' })
+  @ApiResponse({ status: 200, description: 'Place successfully deleted' })
+  @ApiResponse({ status: 404, description: 'Place not found' })
+  async remove(@Param('id') id: string) {
+    await this.placesService.remove(id);
+    return { success: true };
+  }
+
+  @Post('categories')
+  @ApiOperation({ summary: 'Create a new category (admin)' })
+  @ApiResponse({ status: 201, description: 'Category successfully created' })
+  @ApiResponse({ status: 409, description: 'Category code already exists' })
+  async createCategory(
+    @Body() dto: { code: string; name: string; description?: string }
+  ) {
+    const data = await this.placesService.createCategory(dto);
+    return { data };
+  }
 }
+

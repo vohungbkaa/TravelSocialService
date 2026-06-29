@@ -21,12 +21,29 @@ export class PlacesService {
   async create(dto: CreatePlaceDto, userId: string) {
     this.validateCosts(dto.estimatedMinCost, dto.estimatedMaxCost);
 
-    // Validate Category exists
-    const category = await this.prisma.placeCategory.findUnique({
-      where: { id: dto.categoryId },
-    });
-    if (!category) {
-      throw new NotFoundException('CATEGORY_NOT_FOUND');
+    // Validate or assign Category
+    let categoryId = dto.categoryId;
+    if (!categoryId) {
+      let uncategorized = await this.prisma.placeCategory.findUnique({
+        where: { code: 'uncategorized' },
+      });
+      if (!uncategorized) {
+        uncategorized = await this.prisma.placeCategory.create({
+          data: {
+            code: 'uncategorized',
+            name: 'Chưa phân loại',
+            description: 'Danh mục mặc định khi không chọn phân loại',
+          },
+        });
+      }
+      categoryId = uncategorized.id;
+    } else {
+      const category = await this.prisma.placeCategory.findUnique({
+        where: { id: categoryId },
+      });
+      if (!category) {
+        throw new NotFoundException('CATEGORY_NOT_FOUND');
+      }
     }
 
     // Validate Area exists if provided
@@ -50,7 +67,7 @@ export class PlacesService {
         localTip: dto.localTip,
         bestTime: dto.bestTime,
         priceRange: dto.priceRange,
-        categoryId: dto.categoryId,
+        categoryId: categoryId,
         areaId: dto.areaId,
         address: dto.address,
         provinceCode: dto.provinceCode,
@@ -87,13 +104,32 @@ export class PlacesService {
       this.validateCosts(minCost, maxCost);
     }
 
-    if (dto.categoryId) {
-      const category = await this.prisma.placeCategory.findUnique({
-        where: { id: dto.categoryId },
-      });
-      if (!category) {
-        throw new NotFoundException('CATEGORY_NOT_FOUND');
+    let categoryConnect = undefined;
+    if (dto.categoryId !== undefined) {
+      let catId = dto.categoryId;
+      if (!catId) {
+        let uncategorized = await this.prisma.placeCategory.findUnique({
+          where: { code: 'uncategorized' },
+        });
+        if (!uncategorized) {
+          uncategorized = await this.prisma.placeCategory.create({
+            data: {
+              code: 'uncategorized',
+              name: 'Chưa phân loại',
+              description: 'Danh mục mặc định khi không chọn phân loại',
+            },
+          });
+        }
+        catId = uncategorized.id;
+      } else {
+        const category = await this.prisma.placeCategory.findUnique({
+          where: { id: catId },
+        });
+        if (!category) {
+          throw new NotFoundException('CATEGORY_NOT_FOUND');
+        }
       }
+      categoryConnect = { connect: { id: catId } };
     }
 
     if (dto.areaId) {
@@ -118,7 +154,7 @@ export class PlacesService {
       localTip: dto.localTip,
       bestTime: dto.bestTime,
       priceRange: dto.priceRange,
-      category: dto.categoryId ? { connect: { id: dto.categoryId } } : undefined,
+      category: categoryConnect,
       area: dto.areaId !== undefined
         ? (dto.areaId !== null ? { connect: { id: dto.areaId } } : { disconnect: true })
         : undefined,
@@ -192,6 +228,50 @@ export class PlacesService {
       data: { status: PlaceStatus.DRAFT },
     });
   }
+
+  async findAllAdmin() {
+    return this.prisma.place.findMany({
+      include: {
+        category: true,
+        area: true,
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOneAdmin(id: string) {
+    const place = await this.prisma.place.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        area: true,
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
+    if (!place) {
+      throw new NotFoundException('PLACE_NOT_FOUND');
+    }
+    return place;
+  }
+
+  async remove(id: string) {
+    const place = await this.prisma.place.findUnique({
+      where: { id },
+    });
+    if (!place) {
+      throw new NotFoundException('PLACE_NOT_FOUND');
+    }
+    await this.prisma.place.delete({
+      where: { id },
+    });
+    return { success: true };
+  }
+
 
   // --- Place Images Gallery Operations ---
 
@@ -399,6 +479,23 @@ export class PlacesService {
     }
 
     return place;
+  }
+
+  async createCategory(dto: { code: string; name: string; description?: string }) {
+    const code = dto.code.toLowerCase().trim();
+    const existing = await this.prisma.placeCategory.findUnique({
+      where: { code },
+    });
+    if (existing) {
+      throw new ConflictException('CATEGORY_CODE_ALREADY_EXISTS');
+    }
+    return this.prisma.placeCategory.create({
+      data: {
+        code,
+        name: dto.name,
+        description: dto.description,
+      },
+    });
   }
 
   // --- Helpers ---

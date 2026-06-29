@@ -87,7 +87,35 @@ npm run start:prod
 
 Ứng dụng mặc định chạy tại địa chỉ: [http://localhost:3000/api/v1](http://localhost:3000/api/v1)
 
+### Bước 6: Tắt ứng dụng và các dịch vụ đi kèm
+Khi muốn dừng dự án, bạn có thể thực hiện các bước sau:
+
+#### A. Tắt ứng dụng NestJS
+* **Nếu đang chạy trực tiếp trên terminal (Foreground):** Nhấn tổ hợp phím `Ctrl + C` tại cửa sổ terminal đang chạy.
+* **Nếu ứng dụng bị chạy ngầm hoặc bị kẹt cổng (`EADDRINUSE: address already in use`):**
+  1. Tìm ID của tiến trình (PID) đang chạy trên cổng `3000`:
+     ```bash
+     lsof -i :3000
+     ```
+  2. Tắt tiến trình đó (thay `<PID>` bằng số tìm được ở bước trên, ví dụ `kill 70140`):
+     ```bash
+     kill <PID>
+     ```
+     *(Hoặc cưỡng ép tắt bằng `kill -9 <PID>` nếu tiến trình không phản hồi).*
+
+#### B. Tắt cơ sở dữ liệu (PostgreSQL)
+Tùy thuộc vào cách bạn khởi động ở Bước 3:
+* **Nếu chạy qua Homebrew (macOS):**
+  ```bash
+  brew services stop postgresql@16
+  ```
+* **Nếu chạy qua Docker Compose:**
+  ```bash
+  docker compose down
+  ```
+
 ---
+
 
 ## 📖 Tài liệu API (Swagger UI)
 Sau khi ứng dụng đã khởi động thành công, bạn có thể truy cập tài liệu Swagger tại:
