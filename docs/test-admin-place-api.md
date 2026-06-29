@@ -157,6 +157,84 @@ SEED_ADMIN_PASSWORD=SuperSecureAdminPassword123!
 SEED_ADMIN_DISPLAY_NAME=Super Admin
 ```
 
+### Giai thich `SEED_ADMIN_*`
+
+Nhom bien `SEED_ADMIN_*` dung de tao tai khoan admin dau tien cho moi truong local/MVP.
+
+```txt
+SEED_ADMIN_EMAIL
+```
+
+Email cua admin. Co the dung de login.
+
+```txt
+SEED_ADMIN_USERNAME
+```
+
+Username cua admin. Co the dung de login.
+
+```txt
+SEED_ADMIN_PASSWORD
+```
+
+Mat khau admin. Script se hash mat khau truoc khi luu database.
+
+```txt
+SEED_ADMIN_DISPLAY_NAME
+```
+
+Ten hien thi cua admin.
+
+Chay seed admin:
+
+```bash
+npm run db:seed:admin
+```
+
+Neu thanh cong lan dau:
+
+```txt
+Seed completed: Admin user created.
+```
+
+Neu admin da ton tai:
+
+```txt
+Seed completed: Admin user updated.
+```
+
+Script seed admin idempotent, co the chay lai nhieu lan. Neu email/username da ton tai, script se update user do len role `SUPER_ADMIN` va status `ACTIVE`.
+
+Sau khi seed, login bang username:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "identifier": "admin",
+    "password": "SuperSecureAdminPassword123!"
+  }'
+```
+
+Hoac login bang email:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "identifier": "admin@travelsocial.xyz",
+    "password": "SuperSecureAdminPassword123!"
+  }'
+```
+
+Ket qua dung se co `accessToken` va `refreshToken`.
+
+Luu y bao mat:
+
+- Chi dung password mac dinh cho local/dev.
+- Khi deploy hoac test voi nguoi ngoai, doi `SEED_ADMIN_PASSWORD`.
+- Khong commit `.env` len git.
+
 ## 2. Chay API server
 
 ```bash
