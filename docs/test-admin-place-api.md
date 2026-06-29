@@ -20,6 +20,15 @@ http://localhost:3000/docs
 
 ## 1. Chuan bi database va seed data
 
+Co 2 cach chay PostgreSQL local:
+
+- Cach A: Docker Compose.
+- Cach B: PostgreSQL cai truc tiep tren may.
+
+Neu ban khong muon dung Docker, xem muc `1B`.
+
+## 1A. Chay PostgreSQL bang Docker Compose
+
 Chay PostgreSQL local:
 
 ```bash
@@ -31,6 +40,95 @@ Neu chua co `.env`:
 ```bash
 cp .env.example .env
 ```
+
+Voi Docker Compose mac dinh, `DATABASE_URL` la:
+
+```txt
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/travel_social
+```
+
+## 1B. Chay PostgreSQL cai truc tiep tren may, khong dung Docker
+
+Neu may da cai PostgreSQL, tao database `travel_social`.
+
+### macOS Homebrew
+
+Neu cai PostgreSQL bang Homebrew:
+
+```bash
+brew services start postgresql
+```
+
+Kiem tra `psql`:
+
+```bash
+psql --version
+```
+
+Tao database:
+
+```bash
+createdb travel_social
+```
+
+Neu local PostgreSQL dung user macOS hien tai, `DATABASE_URL` co the la:
+
+```txt
+DATABASE_URL=postgresql://localhost:5432/travel_social
+```
+
+Hoac:
+
+```txt
+DATABASE_URL=postgresql://<your_macos_username>@localhost:5432/travel_social
+```
+
+### Tao user/password rieng cho project
+
+Neu muon tao user rieng:
+
+```bash
+psql postgres
+```
+
+Trong shell `psql`, chay:
+
+```sql
+CREATE USER travel_social_user WITH PASSWORD 'travel_social_password';
+CREATE DATABASE travel_social OWNER travel_social_user;
+GRANT ALL PRIVILEGES ON DATABASE travel_social TO travel_social_user;
+\q
+```
+
+Sau do set `.env`:
+
+```txt
+DATABASE_URL=postgresql://travel_social_user:travel_social_password@localhost:5432/travel_social
+```
+
+### Neu database da ton tai
+
+Neu `createdb travel_social` bao loi database da ton tai, co the bo qua va dung database hien co.
+
+Kiem tra ket noi:
+
+```bash
+psql "$DATABASE_URL"
+```
+
+Hoac neu chua export env:
+
+```bash
+psql postgresql://travel_social_user:travel_social_password@localhost:5432/travel_social
+```
+
+Thoat `psql`:
+
+```txt
+\q
+```
+
+## 1C. Chay migration va seed
 
 Chay migration:
 
@@ -457,4 +555,3 @@ Kiem tra:
 [ ] publish PLACE_ID
 [ ] GET /areas/tien-thang/places thay dia danh
 ```
-
