@@ -482,7 +482,7 @@ export class PlacesService {
     return place;
   }
 
-  async createCategory(dto: { code?: string; name: string; description?: string }) {
+  async createCategory(dto: { code?: string; name: string; description?: string; icon?: string }) {
     let code: string | undefined = undefined;
     if (dto.code) {
       code = dto.code.trim();
@@ -498,6 +498,7 @@ export class PlacesService {
         code,
         name: dto.name,
         description: dto.description,
+        icon: dto.icon,
       },
     });
   }
