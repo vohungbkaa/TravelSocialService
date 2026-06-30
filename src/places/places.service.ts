@@ -482,13 +482,16 @@ export class PlacesService {
     return place;
   }
 
-  async createCategory(dto: { code: string; name: string; description?: string }) {
-    const code = dto.code.toLowerCase().trim();
-    const existing = await this.prisma.placeCategory.findUnique({
-      where: { code },
-    });
-    if (existing) {
-      throw new ConflictException('CATEGORY_CODE_ALREADY_EXISTS');
+  async createCategory(dto: { code?: string; name: string; description?: string }) {
+    let code: string | undefined = undefined;
+    if (dto.code) {
+      code = dto.code.trim();
+      const existing = await this.prisma.placeCategory.findUnique({
+        where: { code },
+      });
+      if (existing) {
+        throw new ConflictException('CATEGORY_CODE_ALREADY_EXISTS');
+      }
     }
     return this.prisma.placeCategory.create({
       data: {
@@ -505,7 +508,7 @@ export class PlacesService {
     });
   }
 
-  async updateCategory(id: string, active: boolean) {
+  async updateCategory(id: number, active: boolean) {
     const existing = await this.prisma.placeCategory.findUnique({
       where: { id },
     });

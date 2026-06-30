@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, ParseIntPipe } from '@nestjs/common';
 import { PlacesService } from './places.service';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -33,7 +33,7 @@ export class PlaceCategoriesController {
   @ApiOperation({ summary: 'Create a new category (admin)' })
   @ApiResponse({ status: 201, description: 'Category successfully created' })
   @ApiResponse({ status: 409, description: 'Category code already exists' })
-  async create(@Body() dto: { code: string; name: string; description?: string }) {
+  async create(@Body() dto: { code?: string; name: string; description?: string }) {
     const data = await this.placesService.createCategory(dto);
     return { data };
   }
@@ -45,7 +45,7 @@ export class PlaceCategoriesController {
   @ApiResponse({ status: 200, description: 'Category status successfully updated' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: { active: boolean }
   ) {
     const data = await this.placesService.updateCategory(id, dto.active);

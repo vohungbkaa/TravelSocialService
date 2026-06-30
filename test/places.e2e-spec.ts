@@ -350,4 +350,78 @@ describe('Places & Areas (e2e)', () => {
         });
     });
   });
+
+  describe('Place Categories Management', () => {
+    it('should allow admin to create a category with a code and return integer id', () => {
+      return request(app.getHttpServer())
+        .post('/api/v1/place-categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          code: 'TEST_CAT',
+          name: 'Test Category',
+          description: 'A test category description',
+        })
+        .expect(HttpStatus.CREATED)
+        .expect((res) => {
+          expect(res.body.data.id).toBeDefined();
+          expect(typeof res.body.data.id).toBe('number');
+          expect(res.body.data.code).toBe('TEST_CAT');
+          expect(res.body.data.name).toBe('Test Category');
+        });
+    });
+
+    it('should allow admin to create a category without a code (for user-added categories)', () => {
+      return request(app.getHttpServer())
+        .post('/api/v1/place-categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'User Custom Category',
+          description: 'Added dynamically without code',
+        })
+        .expect(HttpStatus.CREATED)
+        .expect((res) => {
+          expect(res.body.data.id).toBeDefined();
+          expect(typeof res.body.data.id).toBe('number');
+          expect(res.body.data.code).toBeNull();
+          expect(res.body.data.name).toBe('User Custom Category');
+        });
+    });
+
+    it('should allow public retrieval of active categories containing id as number', () => {
+      return request(app.getHttpServer())
+        .get('/api/v1/place-categories')
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(Array.isArray(res.body.data)).toBe(true);
+          const cat = res.body.data.find((c: any) => c.name === 'Attractions');
+          expect(cat).toBeDefined();
+          expect(typeof cat.id).toBe('number');
+        });
+    });
+
+    it('should allow admin to toggle category active status using integer id', async () => {
+      // First create one
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/place-categories')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Temporary Category',
+        })
+        .expect(HttpStatus.CREATED);
+
+      const catId = createRes.body.data.id;
+      expect(typeof catId).toBe('number');
+
+      // Deactivate it
+      await request(app.getHttpServer())
+        .patch(`/api/v1/place-categories/${catId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ active: false })
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(res.body.data.active).toBe(false);
+        });
+    });
+  });
 });
+

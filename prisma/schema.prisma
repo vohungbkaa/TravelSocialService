@@ -93,8 +93,8 @@ model Area {
 }
 
 model PlaceCategory {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          Int      @id @default(autoincrement())
+  code        String?  @unique
   name        String
   description String?
   active      Boolean  @default(true)
@@ -113,7 +113,7 @@ model Place {
   localTip                    String?
   bestTime                    String?
   priceRange                  String?
-  categoryId                  String
+  categoryId                  Int
   address                     String?
   provinceCode                String?
   districtCode                String?

@@ -4,16 +4,12 @@ async function main() {
   const prisma = new PrismaClient();
 
   const categories = [
-    { code: 'food', name: 'Food & Dining', description: 'Restaurants, street food, and culinary experiences' },
-    { code: 'cafe', name: 'Cafes', description: 'Coffee shops, tea houses, and dessert spots' },
-    { code: 'homestay', name: 'Homestays & Lodging', description: 'Hotels, hostels, homestays, and local stays' },
-    { code: 'attraction', name: 'Attractions', description: 'Famous landmarks, historical sites, and monuments' },
-    { code: 'activity', name: 'Activities', description: 'Workshops, tours, outdoor adventures, and classes' },
-    { code: 'local_market', name: 'Local Markets', description: 'Traditional markets, night markets, and local shops' },
-    { code: 'viewpoint', name: 'Viewpoints', description: 'Scenic viewpoints, photogenic spots, and lookouts' },
-    { code: 'culture', name: 'Culture & History', description: 'Museums, temples, pagodas, and heritage sites' },
-    { code: 'nature', name: 'Nature & Parks', description: 'National parks, lakes, rivers, beaches, and waterfalls' },
-    { code: 'nightlife', name: 'Nightlife', description: 'Bars, pubs, clubs, and late-night entertainment' },
+    { code: 'uncategorized', name: 'Chưa phân loại', description: 'Danh mục mặc định khi không chọn phân loại' },
+    { code: 'ARCHITECTURE', name: 'Kiến trúc', description: 'Công trình, nhà cổ, cầu, phố cổ, kiến trúc đặc trưng' },
+    { code: 'CUISINE', name: 'Ẩm thực', description: 'Món ngon, đặc sản, quán ăn, trải nghiệm ăn uống' },
+    { code: 'CULTURE', name: 'Văn hóa', description: 'Phong tục, đời sống địa phương, làng nghề, sinh hoạt truyền thống' },
+    { code: 'HISTORY', name: 'Lịch sử', description: 'Di tích, bảo tàng, địa danh gắn với sự kiện lịch sử' },
+    { code: 'FESTIVAL', name: 'Lễ hội', description: 'Lễ hội dân gian, sự kiện văn hóa, hoạt động cộng đồng' },
   ];
 
   try {
@@ -42,3 +38,4 @@ async function main() {
 }
 
 main();
+

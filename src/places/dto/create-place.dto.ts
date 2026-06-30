@@ -49,10 +49,10 @@ export class CreatePlaceDto {
   @Length(0, 100, { message: 'Price range cannot exceed 100 characters' })
   priceRange?: string;
 
-  @ApiProperty({ example: 'category-uuid-here', required: false })
-  @IsString()
+  @ApiProperty({ example: 1, required: false })
+  @IsInt()
   @IsOptional()
-  categoryId?: string;
+  categoryId?: number;
 
   @ApiProperty({ example: 'area-uuid-here', required: false })
   @IsString()
