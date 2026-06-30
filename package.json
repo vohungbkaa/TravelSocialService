@@ -21,6 +21,7 @@
     "db:seed:admin": "ts-node src/scripts/seed-admin.ts",
     "db:seed:categories": "ts-node src/scripts/seed-categories.ts",
     "db:seed:areas": "ts-node src/scripts/seed-areas.ts",
+    "db:seed:mock-places": "ts-node src/scripts/seed-mock-places.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

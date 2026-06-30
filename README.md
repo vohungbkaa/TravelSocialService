@@ -80,7 +80,31 @@ npm run db:seed:categories
 
 # 3. Tạo khu vực bản đồ mặc định
 npm run db:seed:areas
+
+# 4. Tạo các địa danh mẫu (Đình Bạch Trữ, Đình Phú Mỹ, Mô hình dưa lưới) cùng hình ảnh & video mẫu
+npm run db:seed:mock-places
 ```
+
+### Bước 5.1: Xoá sạch dữ liệu và làm mới từ đầu (Reset Database)
+* **Mục đích**: Khi bạn muốn xóa toàn bộ dữ liệu hiện tại trong các bảng để cấu trúc lại hoặc nạp lại dữ liệu mẫu sạch từ đầu mà không cần xóa database vật lý thủ công.
+* **Các bước thực hiện**:
+  1. **Reset Database**: Chạy lệnh Prisma để xoá sạch các bảng dữ liệu cũ và khởi tạo lại cấu trúc bảng trống:
+     ```bash
+     npx prisma migrate reset
+     ```
+     *(Hệ thống sẽ hiển thị cảnh báo yêu cầu xác nhận: `Are you sure you want to reset your database?`, hãy nhập `y` và nhấn Enter để xác nhận).*
+
+     > [!TIP]
+     > Nếu bạn muốn reset nhanh và bỏ qua bước hỏi xác nhận, có thể dùng cờ `--force`:
+     > `npx prisma migrate reset --force`
+     
+  2. **Nạp lại dữ liệu (Seeding)**: Sau khi reset thành công các bảng sẽ bị trống. Bạn hãy chạy lại các lệnh Seeding ở Bước 5 để nạp lại toàn bộ dữ liệu mặc định và dữ liệu mẫu:
+     ```bash
+     npm run db:seed:admin
+     npm run db:seed:categories
+     npm run db:seed:areas
+     npm run db:seed:mock-places
+     ```
 
 ### Bước 6: Chạy ứng dụng
 
