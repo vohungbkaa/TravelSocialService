@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as express from 'express';
+import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,6 +16,9 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
+
+  // Serve static files for local uploads (if using local storage provider)
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   app.enableCors({
     origin: corsOrigins,

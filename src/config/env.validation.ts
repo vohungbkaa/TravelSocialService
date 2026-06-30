@@ -20,6 +20,11 @@ export const envSchema = z.object({
   R2_BUCKET: z.string().optional().or(z.literal('')),
   R2_PUBLIC_BASE_URL: z.string().optional().or(z.literal('')),
   R2_ENDPOINT: z.string().optional().or(z.literal('')),
+  STORAGE_PROVIDER: z.enum(['local', 'r2']).default('local'),
+  STORAGE_LOCAL_BASE_URL: z
+    .string()
+    .url({ message: 'STORAGE_LOCAL_BASE_URL must be a valid URL' })
+    .default('http://localhost:3000/uploads'),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000,http://localhost:5173'),

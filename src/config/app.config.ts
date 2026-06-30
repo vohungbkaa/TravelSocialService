@@ -18,6 +18,10 @@ export default registerAs('app', () => ({
     publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
     endpoint: process.env.R2_ENDPOINT,
   },
+  storage: {
+    provider: process.env.STORAGE_PROVIDER || 'local',
+    localBaseUrl: process.env.STORAGE_LOCAL_BASE_URL || 'http://localhost:3000/uploads',
+  },
   corsOrigins: (
     process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173'
   )

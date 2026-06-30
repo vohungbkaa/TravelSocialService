@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { AreasModule } from './areas/areas.module';
 import { PlacesModule } from './places/places.module';
+import { UploadModule } from './upload/upload.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -19,6 +20,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuthModule,
     AreasModule,
     PlacesModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [

@@ -68,7 +68,18 @@ Sau khi Database ở Bước 3 đã sẵn sàng, chạy lệnh sau:
 npm run prisma:migrate
 ```
 
-### Bước 5: Chạy ứng dụng
+### Bước 5: Tạo tài khoản Admin và Danh mục mặc định (Seeding)
+* **Mục đích**: Khởi tạo tài khoản quản trị tối cao (`SUPER_ADMIN`) dựa trên các thông số cấu hình trong file `.env` và thiết lập các danh mục địa danh mặc định (Kiến trúc, Ẩm thực, Văn hóa, Lịch sử, Lễ hội) vào cơ sở dữ liệu để hệ thống sẵn sàng hoạt động.
+Chạy hai câu lệnh dưới đây:
+```bash
+# 1. Tạo tài khoản Admin mặc định
+npm run db:seed:admin
+
+# 2. Tạo danh mục địa danh mặc định
+npm run db:seed:categories
+```
+
+### Bước 6: Chạy ứng dụng
 
 #### Chế độ phát triển (Development)
 Để chạy dự án với chế độ theo dõi thay đổi (Hot-reload):
@@ -87,7 +98,7 @@ npm run start:prod
 
 Ứng dụng mặc định chạy tại địa chỉ: [http://localhost:3000/api/v1](http://localhost:3000/api/v1)
 
-### Bước 6: Tắt ứng dụng và các dịch vụ đi kèm
+### Bước 7: Tắt ứng dụng và các dịch vụ đi kèm
 Khi muốn dừng dự án, bạn có thể thực hiện các bước sau:
 
 #### A. Tắt ứng dụng NestJS
@@ -122,6 +133,16 @@ Sau khi ứng dụng đã khởi động thành công, bạn có thể truy cậ
 👉 [**http://localhost:3000/docs**](http://localhost:3000/docs)
 
 * Swagger đã được tích hợp sẵn cấu hình bảo mật Bearer Auth (JWT) để test các API yêu cầu quyền đăng nhập.
+
+---
+
+## 📚 Hướng dẫn các Tính năng Chi tiết
+Để xem tài liệu thiết kế và hướng dẫn vận hành chi tiết cho từng tính năng, bạn có thể tham khảo:
+* 🔐 [Hướng dẫn Xác thực & Phân quyền](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-auth.md)
+* 💾 [Hướng dẫn Quản lý Danh mục Địa danh](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-categories.md)
+* 🗺️ [Hướng dẫn Quản lý Khu vực Bản đồ](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-areas.md)
+* 🏛️ [Hướng dẫn Quản lý Địa danh & Câu chuyện](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-places.md)
+* 📁 [Hướng dẫn Tải lên & Lưu trữ Media](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-upload.md)
 
 ---
 
