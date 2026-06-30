@@ -147,16 +147,5 @@ export class AdminPlacesController {
     await this.placesService.remove(id);
     return { success: true };
   }
-
-  @Post('categories')
-  @ApiOperation({ summary: 'Create a new category (admin)' })
-  @ApiResponse({ status: 201, description: 'Category successfully created' })
-  @ApiResponse({ status: 409, description: 'Category code already exists' })
-  async createCategory(
-    @Body() dto: { code: string; name: string; description?: string }
-  ) {
-    const data = await this.placesService.createCategory(dto);
-    return { data };
-  }
 }
 

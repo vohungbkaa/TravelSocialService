@@ -361,6 +361,7 @@ export class PlacesService {
 
   async listCategories() {
     return this.prisma.placeCategory.findMany({
+      where: { active: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -495,6 +496,25 @@ export class PlacesService {
         name: dto.name,
         description: dto.description,
       },
+    });
+  }
+
+  async listCategoriesAdmin() {
+    return this.prisma.placeCategory.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async updateCategory(id: string, active: boolean) {
+    const existing = await this.prisma.placeCategory.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException('CATEGORY_NOT_FOUND');
+    }
+    return this.prisma.placeCategory.update({
+      where: { id },
+      data: { active },
     });
   }
 
