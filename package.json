@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "db:seed:admin": "ts-node src/scripts/seed-admin.ts",
     "db:seed:categories": "ts-node src/scripts/seed-categories.ts",
+    "db:seed:areas": "ts-node src/scripts/seed-areas.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

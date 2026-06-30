@@ -77,6 +77,9 @@ npm run db:seed:admin
 
 # 2. Tạo danh mục địa danh mặc định
 npm run db:seed:categories
+
+# 3. Tạo khu vực bản đồ mặc định
+npm run db:seed:areas
 ```
 
 ### Bước 6: Chạy ứng dụng
