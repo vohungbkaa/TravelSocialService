@@ -22,6 +22,8 @@
     "db:seed:categories": "ts-node src/scripts/seed-categories.ts",
     "db:seed:areas": "ts-node src/scripts/seed-areas.ts",
     "db:seed:mock-places": "ts-node src/scripts/seed-mock-places.ts",
+    "db:seed:all": "npm run db:seed:admin && npm run db:seed:categories && npm run db:seed:areas && npm run db:seed:mock-places",
+    "db:reset:seed": "prisma migrate reset --force && npm run db:seed:all",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",

@@ -69,13 +69,13 @@ npm run prisma:migrate
 ```
 
 ### Bước 5: Tạo tài khoản Admin và Danh mục mặc định (Seeding)
-* **Mục đích**: Khởi tạo tài khoản quản trị tối cao (`SUPER_ADMIN`) dựa trên các thông số cấu hình trong file `.env` và thiết lập các danh mục địa danh mặc định (Kiến trúc, Ẩm thực, Văn hóa, Lịch sử, Lễ hội) vào cơ sở dữ liệu để hệ thống sẵn sàng hoạt động.
+* **Mục đích**: Khởi tạo tài khoản quản trị tối cao (`SUPER_ADMIN`) dựa trên các thông số cấu hình trong file `.env`, tạo danh sách biểu tượng marker (`MarkerIcon`) và thiết lập các danh mục địa danh mặc định (Kiến trúc, Ẩm thực, Văn hóa, Lịch sử, Lễ hội) vào cơ sở dữ liệu để hệ thống sẵn sàng hoạt động.
 Chạy hai câu lệnh dưới đây:
 ```bash
 # 1. Tạo tài khoản Admin mặc định
 npm run db:seed:admin
 
-# 2. Tạo danh mục địa danh mặc định
+# 2. Tạo catalog biểu tượng marker và danh mục địa danh mặc định
 npm run db:seed:categories
 
 # 3. Tạo khu vực bản đồ mặc định
@@ -84,6 +84,9 @@ npm run db:seed:areas
 # 4. Tạo các địa danh mẫu (Đình Bạch Trữ, Đình Phú Mỹ, Mô hình dưa lưới) cùng hình ảnh & video mẫu
 npm run db:seed:mock-places
 ```
+
+> [!NOTE]
+> Biểu tượng marker không được hard-code theo tên danh mục hoặc tên địa danh trong client. Bảng `MarkerIcon` lưu `key`, `name`, `iconUrl`, `markerColor`; bảng `PlaceCategory` tham chiếu bằng `markerIconId`. Khi admin thêm biểu tượng marker mới và chọn cho danh mục, web/mobile chỉ cần đọc `category.markerIcon.iconUrl` và `category.markerIcon.markerColor` từ API để hiển thị, không cần sửa code theo từng danh mục hoặc từng ngôn ngữ.
 
 ### Bước 5.1: Xoá sạch dữ liệu và làm mới từ đầu (Reset Database)
 * **Mục đích**: Khi bạn muốn xóa toàn bộ dữ liệu hiện tại trong các bảng để cấu trúc lại hoặc nạp lại dữ liệu mẫu sạch từ đầu mà không cần xóa database vật lý thủ công.
@@ -105,6 +108,19 @@ npm run db:seed:mock-places
      npm run db:seed:areas
      npm run db:seed:mock-places
      ```
+
+     Hoặc dùng một lệnh gộp:
+     ```bash
+     npm run db:seed:all
+     ```
+
+  3. **Reset và nạp lại dữ liệu bằng một lệnh**: Nếu muốn xóa sạch database, migrate lại schema và nạp toàn bộ dữ liệu mặc định ngay lập tức, dùng:
+     ```bash
+     npm run db:reset:seed
+     ```
+
+     > [!WARNING]
+     > Lệnh này dùng `prisma migrate reset --force`, sẽ xóa dữ liệu hiện tại mà không hỏi xác nhận. Chỉ dùng với database local/dev hoặc khi chắc chắn muốn làm mới dữ liệu.
 
 ### Bước 6: Chạy ứng dụng
 

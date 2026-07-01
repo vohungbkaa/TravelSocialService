@@ -98,10 +98,26 @@ model PlaceCategory {
   name        String
   description String?
   icon        String?
+  iconUrl     String?
+  markerColor String?
+  markerIconId Int?
+  markerIcon   MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   places      Place[]
+}
+
+model MarkerIcon {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  iconUrl     String
+  markerColor String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  categories  PlaceCategory[]
 }
 
 model Place {

@@ -23,8 +23,11 @@ export const envSchema = z.object({
   STORAGE_PROVIDER: z.enum(['local', 'r2']).default('local'),
   STORAGE_LOCAL_BASE_URL: z
     .string()
-    .url({ message: 'STORAGE_LOCAL_BASE_URL must be a valid URL' })
-    .default('http://localhost:3000/uploads'),
+    .refine(
+      (value) => value.startsWith('/') || /^https?:\/\//i.test(value),
+      { message: 'STORAGE_LOCAL_BASE_URL must be an absolute URL or root-relative path' },
+    )
+    .default('/media'),
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000,http://localhost:5173'),

@@ -17,8 +17,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
 
-  // Serve static files for local uploads (if using local storage provider)
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+  // Serve local media files without exposing the internal upload directory name.
+  app.use('/media', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   app.enableCors({
     origin: corsOrigins,

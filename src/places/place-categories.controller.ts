@@ -33,7 +33,15 @@ export class PlaceCategoriesController {
   @ApiOperation({ summary: 'Create a new category (admin)' })
   @ApiResponse({ status: 201, description: 'Category successfully created' })
   @ApiResponse({ status: 409, description: 'Category code already exists' })
-  async create(@Body() dto: { code?: string; name: string; description?: string; icon?: string }) {
+  async create(@Body() dto: {
+    code?: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    iconUrl?: string;
+    markerColor?: string;
+    markerIconId?: number;
+  }) {
     const data = await this.placesService.createCategory(dto);
     return { data };
   }

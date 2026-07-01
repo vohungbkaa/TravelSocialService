@@ -20,7 +20,7 @@ export default registerAs('app', () => ({
   },
   storage: {
     provider: process.env.STORAGE_PROVIDER || 'local',
-    localBaseUrl: process.env.STORAGE_LOCAL_BASE_URL || 'http://localhost:3000/uploads',
+    localBaseUrl: process.env.STORAGE_LOCAL_BASE_URL || '/media',
   },
   corsOrigins: (
     process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173'

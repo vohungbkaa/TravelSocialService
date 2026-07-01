@@ -12,7 +12,7 @@ export class LocalStorageProvider implements StorageProvider {
 
   constructor(private readonly configService: ConfigService) {
     this.uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    this.baseUrl = this.configService.get<string>('app.storage.localBaseUrl') || 'http://localhost:3000/uploads';
+    this.baseUrl = (this.configService.get<string>('app.storage.localBaseUrl') || '/media').replace(/\/$/, '');
 
     // Ensure upload directory exists
     if (!fs.existsSync(this.uploadDir)) {
