@@ -146,7 +146,8 @@ export class AreasService {
         status: 'PUBLISHED',
       },
       include: {
-        category: true,
+        category: { include: { markerIcon: true } },
+        markerIcon: true,
         images: {
           orderBy: { sortOrder: 'asc' },
         },

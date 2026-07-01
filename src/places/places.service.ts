@@ -15,6 +15,21 @@ import { normalizeMediaUrls } from '../common/utils/media-url';
 import { Prisma, PlaceStatus, PriceLevel } from '@prisma/client';
 import * as crypto from 'crypto';
 
+const placeInclude = {
+  category: { include: { markerIcon: true } },
+  markerIcon: true,
+  images: true,
+} satisfies Prisma.PlaceInclude;
+
+const placeListInclude = {
+  category: { include: { markerIcon: true } },
+  markerIcon: true,
+  area: true,
+  images: {
+    orderBy: { sortOrder: 'asc' },
+  },
+} satisfies Prisma.PlaceInclude;
+
 @Injectable()
 export class PlacesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -57,6 +72,8 @@ export class PlacesService {
       }
     }
 
+    await this.validateMarkerIcon(dto.markerIconId);
+
     const slug = await this.generateUniquePlaceSlug(dto.name);
 
     const place = await this.prisma.place.create({
@@ -69,6 +86,7 @@ export class PlacesService {
         bestTime: dto.bestTime,
         priceRange: dto.priceRange,
         categoryId: categoryId,
+        markerIconId: dto.markerIconId || null,
         areaId: dto.areaId,
         address: dto.address,
         provinceCode: dto.provinceCode,
@@ -88,6 +106,7 @@ export class PlacesService {
         status: PlaceStatus.DRAFT,
         createdBy: userId,
       },
+      include: placeInclude,
     });
 
     return normalizeMediaUrls(place);
@@ -144,6 +163,8 @@ export class PlacesService {
       }
     }
 
+    await this.validateMarkerIcon(dto.markerIconId);
+
     let slug = existing.slug;
     if (dto.name && dto.name !== existing.name) {
       slug = await this.generateUniquePlaceSlug(dto.name);
@@ -158,6 +179,9 @@ export class PlacesService {
       bestTime: dto.bestTime,
       priceRange: dto.priceRange,
       category: categoryConnect,
+      markerIcon: dto.markerIconId !== undefined
+        ? (dto.markerIconId ? { connect: { id: dto.markerIconId } } : { disconnect: true })
+        : undefined,
       area: dto.areaId !== undefined
         ? (dto.areaId !== null ? { connect: { id: dto.areaId } } : { disconnect: true })
         : undefined,
@@ -186,10 +210,7 @@ export class PlacesService {
     const place = await this.prisma.place.update({
       where: { id },
       data,
-      include: {
-        category: { include: { markerIcon: true } },
-        images: true,
-      },
+      include: placeInclude,
     });
 
     return normalizeMediaUrls(place);
@@ -240,13 +261,7 @@ export class PlacesService {
 
   async findAllAdmin() {
     const places = await this.prisma.place.findMany({
-      include: {
-        category: { include: { markerIcon: true } },
-        area: true,
-        images: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
+      include: placeListInclude,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -256,13 +271,7 @@ export class PlacesService {
   async findOneAdmin(id: string) {
     const place = await this.prisma.place.findUnique({
       where: { id },
-      include: {
-        category: { include: { markerIcon: true } },
-        area: true,
-        images: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
+      include: placeListInclude,
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -451,12 +460,7 @@ export class PlacesService {
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor } : undefined,
       orderBy,
-      include: {
-        category: { include: { markerIcon: true } },
-        images: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
+      include: placeInclude,
     });
 
     const nextCursor = places.length === limit ? places[places.length - 1].id : null;
@@ -470,12 +474,7 @@ export class PlacesService {
   async findOnePublic(id: string) {
     const place = await this.prisma.place.findUnique({
       where: { id },
-      include: {
-        category: { include: { markerIcon: true } },
-        images: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
+      include: placeInclude,
     });
 
     if (!place || place.status !== PlaceStatus.PUBLISHED) {
@@ -488,12 +487,7 @@ export class PlacesService {
   async findOnePublicBySlug(slug: string) {
     const place = await this.prisma.place.findUnique({
       where: { slug },
-      include: {
-        category: { include: { markerIcon: true } },
-        images: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
+      include: placeInclude,
     });
 
     if (!place || place.status !== PlaceStatus.PUBLISHED) {
@@ -635,6 +629,19 @@ export class PlacesService {
 
   private getDefaultMarkerColor() {
     return '#6366f1';
+  }
+
+  private async validateMarkerIcon(markerIconId?: number | null) {
+    if (!markerIconId) {
+      return;
+    }
+
+    const markerIcon = await this.prisma.markerIcon.findUnique({
+      where: { id: markerIconId },
+    });
+    if (!markerIcon) {
+      throw new NotFoundException('MARKER_ICON_NOT_FOUND');
+    }
   }
 
   private validateCosts(min?: number | null, max?: number | null) {
