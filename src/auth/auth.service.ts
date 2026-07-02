@@ -122,6 +122,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         displayName: user.profile?.displayName || user.username,
+        role: user.role,
       },
     };
   }

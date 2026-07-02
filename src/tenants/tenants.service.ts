@@ -14,9 +14,21 @@ export class TenantsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async resolveFromRequest(request: Request): Promise<TenantContext | undefined> {
+  async resolveFromRequest(request: Request & { user?: { role?: string } }): Promise<TenantContext | undefined> {
     const headers = request.headers;
-    const codeOverride = this.getCodeOverride(headers['x-tenant-code']) || this.getCodeOverride(request.query?.tenant);
+    
+    // Attempt to extract role from auth token if not already parsed
+    let role = request.user?.role;
+    if (!role && headers.authorization?.startsWith('Bearer ')) {
+      try {
+        const token = headers.authorization.split(' ')[1];
+        const payloadStr = Buffer.from(token.split('.')[1], 'base64').toString();
+        const payload = JSON.parse(payloadStr);
+        role = payload.role;
+      } catch (e) {}
+    }
+
+    const codeOverride = this.getCodeOverride(headers['x-tenant-code'], role) || this.getCodeOverride(request.query?.tenant, role);
     if (codeOverride) {
       return this.findEnabledTenantByCode(codeOverride);
     }
@@ -89,6 +101,17 @@ export class TenantsService {
     };
   }
 
+  async findAllForAdmin() {
+    return this.prisma.tenant.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { areas: true, places: true, users: true }
+        }
+      }
+    });
+  }
+
   async canAdminAccessTenant(userId: string, tenantId: string): Promise<boolean> {
     const membership = await this.prisma.tenantUser.findUnique({
       where: {
@@ -101,10 +124,12 @@ export class TenantsService {
     return Boolean(membership?.active);
   }
 
-  private getCodeOverride(value?: unknown): string | undefined {
+  private getCodeOverride(value?: unknown, userRole?: string): string | undefined {
     const enabled =
       this.configService.get<string>('app.nodeEnv') !== 'production' ||
-      this.configService.get<boolean>('app.tenant.enableCodeOverride') === true;
+      this.configService.get<boolean>('app.tenant.enableCodeOverride') === true ||
+      userRole === 'SUPER_ADMIN';
+
     if (!enabled) {
       return undefined;
     }
