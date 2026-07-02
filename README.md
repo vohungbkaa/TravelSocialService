@@ -137,8 +137,8 @@ npm run dev -- --host 0.0.0.0
 Web URL local:
 
 ```txt
-http://localhost:5173/?tenant=tien-thang
-http://localhost:5173/?tenant=da-nang
+http://localhost:5173/travel?hanoi&tenant=tien-thang
+http://localhost:5173/travel?da-nang
 http://tien-thang.localhost:5173
 http://da-nang.localhost:5173
 ```
