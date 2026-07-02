@@ -80,6 +80,11 @@ export class TenantsService {
       orderBy: { createdAt: 'asc' },
     });
 
+    const settings = (currentTenant.settings as Record<string, any>) || {};
+    const minZoom = settings.minZoom !== undefined ? Number(settings.minZoom) : 10;
+    const maxZoom = settings.maxZoom !== undefined ? Number(settings.maxZoom) : 18;
+    const defaultZoom = settings.zoom !== undefined ? Number(settings.zoom) : 13;
+
     return {
       code: currentTenant.code,
       name: currentTenant.name,
@@ -94,9 +99,9 @@ export class TenantsService {
         center: defaultArea
           ? [Number(defaultArea.centerLng), Number(defaultArea.centerLat)]
           : undefined,
-        zoom: 13,
-        minZoom: 10,
-        maxZoom: 18,
+        zoom: defaultZoom,
+        minZoom: minZoom,
+        maxZoom: maxZoom,
       },
     };
   }

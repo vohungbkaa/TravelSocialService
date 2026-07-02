@@ -9,7 +9,7 @@ export const daNangData: TenantDataSeed = {
     name: 'Thành phố Đà Nẵng',
     domain: 'da-nang.localhost',
     theme: { primaryColor: '#0284c7', logoUrl: null },
-    settings: { defaultAreaSlug: 'da-nang' },
+    settings: { defaultAreaSlug: 'da-nang', minZoom: 9, zoom: 11.2 },
     area: {
       slug: 'da-nang',
       name: 'Thành phố Đà Nẵng',
