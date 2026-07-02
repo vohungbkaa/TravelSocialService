@@ -1,219 +1,728 @@
-# Travel Social Service - Backend (NestJS)
+# Travel Social Service
 
-Dự án backend cho mạng xã hội du lịch sử dụng NestJS, Prisma ORM, PostgreSQL và Docker.
+Backend NestJS + Prisma + PostgreSQL cho nền tảng du lịch nhiều tenant. Một backend và một web client có thể phục vụ nhiều địa phương như `tien-thang`, `da-nang`; tenant được xác định bằng domain hoặc bằng query override khi demo qua ngrok free.
 
----
+Tài liệu này viết từ góc nhìn repo backend `TravelSocialService`. Các lệnh web client chạy trong repo `TravelSocialWebApp`.
 
-## Chi phí hạ tầng giai đoạn đầu
+## 1. Chạy Local Từ Đầu
 
-Mục tiêu hiện tại là giữ chi phí hạ tầng bằng `0 USD/tháng`.
+### 1.1. Cài package và tạo env
 
-Level 0 mặc định:
+Backend:
 
-- API: Render Free hoặc môi trường Node.js free tương đương.
-- Database: Supabase Free Postgres qua `DATABASE_URL`.
-- Media sau này: Cloudflare R2 Free tier.
-- Local development: Docker Compose chỉ dùng để chạy PostgreSQL local.
-
-Không cần Redis, Kafka, OpenSearch, Kubernetes, VPS hoặc paid database trong Phase 0.
-
----
-
-## 🛠️ Yêu cầu hệ thống
-* **Node.js**: >= 20.x (Khuyên dùng v20.19.1)
-* **Docker & Docker Compose**: Để khởi chạy PostgreSQL local.
-
----
-
-## 🚀 Hướng dẫn cài đặt và chạy dự án
-
-### Bước 1: Cài đặt các package phụ thuộc
-* **Mục đích**: Tải và cài đặt toàn bộ thư viện bên thứ ba cần thiết (NestJS core, Prisma ORM, Bcrypt, JWT, Passport, class-validator, v.v.) vào thư mục `node_modules` để ứng dụng có thể chạy được.
 ```bash
+cd TravelSocialService
 npm install
-```
-
-### Bước 2: Cấu hình biến môi trường (Environment Variables)
-* **Mục đích**: Tạo file `.env` lưu trữ các tham số cấu hình nhạy cảm và linh hoạt của hệ thống (như thông tin đăng nhập database `DATABASE_URL`, khóa bí mật JWT, cổng chạy cổng PORT, cấu hình Media R2, và tài khoản Admin mặc định) cục bộ trên máy mà không bị đẩy lên GitHub/GitLab.
-Sao chép file cấu hình mẫu `.env.example` thành `.env`:
-```bash
 cp .env.example .env
 ```
-Mở file `.env` mới tạo và tùy chỉnh các thông số phù hợp với môi trường của bạn.
 
-> [!NOTE]
-> File `.env.example` được thiết lập mặc định để kết nối với cơ sở dữ liệu PostgreSQL cục bộ. Khi triển khai production, bạn chỉ cần thay đổi các biến môi trường này (Ví dụ: dùng Supabase Free Postgres).
+Web client:
 
-### Bước 3: Khởi động cơ sở dữ liệu (PostgreSQL)
-* **Mục đích**: Khởi chạy hệ quản trị cơ sở dữ liệu PostgreSQL để cung cấp nơi lưu trữ và truy vấn dữ liệu cho ứng dụng (thông tin người dùng, token, địa danh, ảnh,...).
-Bạn có thể chọn một trong hai cách khởi động dưới đây tùy theo cách bạn cài đặt PostgreSQL:
+```bash
+cd TravelSocialWebApp
+npm install
+cp .env.example .env
+```
 
-#### Cách A: Dùng Homebrew PostgreSQL local (Khuyên dùng cho macOS nếu không dùng Docker)
-Nếu bạn đã cài `postgresql@16` qua Homebrew, khởi động dịch vụ bằng lệnh:
+Backend `.env` local tối thiểu:
+
+```txt
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/travel_social
+JWT_ACCESS_SECRET=change-me
+JWT_REFRESH_SECRET=change-me
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://tien-thang.localhost:5173,http://da-nang.localhost:5173,https://*.ngrok-free.app
+DEFAULT_TENANT_CODE=tien-thang
+ENABLE_TENANT_CODE_OVERRIDE=false
+STORAGE_PROVIDER=local
+STORAGE_LOCAL_BASE_URL=/media
+```
+
+Web client `.env` local:
+
+```txt
+VITE_API_BASE_URL=http://localhost:3000/api/v1
+```
+
+Nếu web và API được reverse proxy chung domain, có thể dùng:
+
+```txt
+VITE_API_BASE_URL=/api/v1
+```
+
+### 1.2. Chạy PostgreSQL
+
+Dùng Docker:
+
+```bash
+docker compose up -d postgres
+```
+
+Hoặc PostgreSQL local trên macOS:
+
 ```bash
 brew services start postgresql@16
 ```
 
-#### Cách B: Chạy qua Docker Compose
-Chạy lệnh Docker Compose sau để khởi động container PostgreSQL chạy ngầm:
-```bash
-docker compose up -d postgres
-```
-*Lưu ý: PostgreSQL mặc định sẽ lắng nghe ở cổng `5432`.*
+### 1.3. Migrate Prisma
 
-### Bước 4: Khởi tạo schema database với Prisma
-* **Mục đích**: Ánh xạ các cấu trúc bảng (models, relations, indexes) định nghĩa trong file `prisma/schema.prisma` vào cơ sở dữ liệu PostgreSQL để khởi tạo các bảng vật lý, đồng thời tự động biên dịch sinh ra bộ thư viện truy vấn dữ liệu type-safe (`Prisma Client`) tương ứng trong `node_modules`.
-Sau khi Database ở Bước 3 đã sẵn sàng, chạy lệnh sau:
 ```bash
+cd TravelSocialService
 npm run prisma:migrate
+npm run prisma:generate
 ```
 
-### Bước 5: Tạo tài khoản Admin và Danh mục mặc định (Seeding)
-* **Mục đích**: Khởi tạo tài khoản quản trị tối cao (`SUPER_ADMIN`) dựa trên các thông số cấu hình trong file `.env`, tạo danh sách biểu tượng marker (`MarkerIcon`) và thiết lập các danh mục địa danh mặc định (Kiến trúc, Ẩm thực, Văn hóa, Lịch sử, Lễ hội) vào cơ sở dữ liệu để hệ thống sẵn sàng hoạt động.
-Chạy hai câu lệnh dưới đây:
+### 1.4. Seed dữ liệu mặc định
+
+Chạy full seed:
+
 ```bash
-# 1. Tạo tài khoản Admin mặc định
+npm run db:seed:all
+```
+
+Lệnh này tương đương:
+
+```bash
 npm run db:seed:admin
-
-# 2. Tạo catalog biểu tượng marker và danh mục địa danh mặc định
-npm run db:seed:categories
-
-# 3. Tạo khu vực bản đồ mặc định
-npm run db:seed:areas
-
-# 4. Tạo các địa danh mẫu (Đình Bạch Trữ, Đình Phú Mỹ, Mô hình dưa lưới) cùng hình ảnh & video mẫu
-npm run db:seed:mock-places
+npm run tenant:seed:all
 ```
 
-> [!NOTE]
-> Biểu tượng marker không được hard-code theo tên danh mục hoặc tên địa danh trong client. Bảng `MarkerIcon` lưu `key`, `name`, `iconUrl`, `markerColor`; bảng `PlaceCategory` tham chiếu bằng `markerIconId`. Khi admin thêm biểu tượng marker mới và chọn cho danh mục, web/mobile chỉ cần đọc `category.markerIcon.iconUrl` và `category.markerIcon.markerColor` từ API để hiển thị, không cần sửa code theo từng danh mục hoặc từng ngôn ngữ.
+Kết quả:
 
-### Bước 5.1: Xoá sạch dữ liệu và làm mới từ đầu (Reset Database)
-* **Mục đích**: Khi bạn muốn xóa toàn bộ dữ liệu hiện tại trong các bảng để cấu trúc lại hoặc nạp lại dữ liệu mẫu sạch từ đầu mà không cần xóa database vật lý thủ công.
-* **Các bước thực hiện**:
-  1. **Reset Database**: Chạy lệnh Prisma để xoá sạch các bảng dữ liệu cũ và khởi tạo lại cấu trúc bảng trống:
-     ```bash
-     npx prisma migrate reset
-     ```
-     *(Hệ thống sẽ hiển thị cảnh báo yêu cầu xác nhận: `Are you sure you want to reset your database?`, hãy nhập `y` và nhấn Enter để xác nhận).*
+- Tạo `SUPER_ADMIN` global từ biến `SEED_ADMIN_*` trong `.env`.
+- Tạo tenant `tien-thang` với domain `tien-thang.localhost`.
+- Tạo tenant `da-nang` với domain `da-nang.localhost`.
+- Tạo area mặc định và boundary GeoJSON cho từng tenant.
+- Tạo marker icons và danh mục địa điểm mặc định.
+- Tạo địa điểm mẫu cho tenant `tien-thang`.
 
-     > [!TIP]
-     > Nếu bạn muốn reset nhanh và bỏ qua bước hỏi xác nhận, có thể dùng cờ `--force`:
-     > `npx prisma migrate reset --force`
-     
-  2. **Nạp lại dữ liệu (Seeding)**: Sau khi reset thành công các bảng sẽ bị trống. Bạn hãy chạy lại các lệnh Seeding ở Bước 5 để nạp lại toàn bộ dữ liệu mặc định và dữ liệu mẫu:
-     ```bash
-     npm run db:seed:admin
-     npm run db:seed:categories
-     npm run db:seed:areas
-     npm run db:seed:mock-places
-     ```
+Reset sạch database local rồi seed lại:
 
-     Hoặc dùng một lệnh gộp:
-     ```bash
-     npm run db:seed:all
-     ```
-
-  3. **Reset và nạp lại dữ liệu bằng một lệnh**: Nếu muốn xóa sạch database, migrate lại schema và nạp toàn bộ dữ liệu mặc định ngay lập tức, dùng:
-     ```bash
-     npm run db:reset:seed
-     ```
-
-     > [!WARNING]
-     > Lệnh này dùng `prisma migrate reset --force`, sẽ xóa dữ liệu hiện tại mà không hỏi xác nhận. Chỉ dùng với database local/dev hoặc khi chắc chắn muốn làm mới dữ liệu.
-
-### Bước 6: Chạy ứng dụng
-
-#### Chế độ phát triển (Development)
-Để chạy dự án với chế độ theo dõi thay đổi (Hot-reload):
 ```bash
+npm run db:reset:seed
+```
+
+Lệnh này đang gọi `npx prisma migrate reset --force` rồi chạy lại `npm run db:seed:all`. Nó xóa dữ liệu hiện tại và chèn lại dữ liệu mẫu, chỉ dùng cho local/dev.
+
+Nếu bạn **chỉ muốn xoá sạch dữ liệu** (đưa database về trạng thái trống hoàn toàn, không nạp lại dữ liệu mẫu):
+
+```bash
+npx prisma migrate reset --force
+```
+
+### 1.5. Chạy backend và web client
+
+Backend:
+
+```bash
+cd TravelSocialService
 npm run start:dev
 ```
 
-#### Chế độ sản xuất (Production Build)
-```bash
-# Biên dịch sang Javascript (nằm trong thư mục /dist)
-npm run build
+Backend URL:
 
-# Chạy ứng dụng sản xuất
+```txt
+http://localhost:3000/api/v1
+http://localhost:3000/docs
+```
+
+Web client:
+
+```bash
+cd TravelSocialWebApp
+npm run dev -- --host 0.0.0.0
+```
+
+Web URL local:
+
+```txt
+http://localhost:5173/?tenant=tien-thang
+http://localhost:5173/?tenant=da-nang
+http://tien-thang.localhost:5173
+http://da-nang.localhost:5173
+```
+
+## 2. Tenant URL Và Header
+
+### 2.1. Local theo hostname
+
+Mỗi tenant có một domain local trong DB:
+
+```txt
+tien-thang.localhost -> tenant tien-thang
+da-nang.localhost    -> tenant da-nang
+```
+
+Full URL:
+
+```txt
+http://tien-thang.localhost:5173
+http://da-nang.localhost:5173
+```
+
+Client gửi:
+
+```txt
+X-Tenant-Host: tien-thang.localhost
+```
+
+hoặc:
+
+```txt
+X-Tenant-Host: da-nang.localhost
+```
+
+Backend resolve theo `Tenant.domain`.
+
+### 2.2. Local hoặc demo qua query tenant
+
+Dùng khi chỉ có một hostname, ví dụ `localhost` hoặc một ngrok free domain:
+
+```txt
+http://localhost:5173/?tenant=tien-thang
+http://localhost:5173/?tenant=da-nang
+```
+
+Client đọc query `tenant`, lưu trong session, rồi gửi:
+
+```txt
+X-Tenant-Host: localhost
+X-Tenant-Code: tien-thang
+```
+
+hoặc:
+
+```txt
+X-Tenant-Host: localhost
+X-Tenant-Code: da-nang
+```
+
+Backend chỉ chấp nhận `X-Tenant-Code` khi `NODE_ENV` không phải `production`, hoặc khi bật:
+
+```txt
+ENABLE_TENANT_CODE_OVERRIDE=true
+```
+
+### 2.3. Ngrok free
+
+Nếu chỉ có một ngrok public URL:
+
+```txt
+https://abc-123.ngrok-free.app
+```
+
+thì URL gửi cho từng bên là:
+
+```txt
+https://abc-123.ngrok-free.app?tenant=tien-thang
+https://abc-123.ngrok-free.app?tenant=da-nang
+```
+
+Nếu backend và web client chạy khác origin qua ngrok, backend `.env` nên có:
+
+```txt
+CORS_ORIGINS=https://*.ngrok-free.app
+ENABLE_TENANT_CODE_OVERRIDE=true
+```
+
+Nếu ngrok proxy cả web và API chung domain, web client dùng:
+
+```txt
+VITE_API_BASE_URL=/api/v1
+```
+
+Nếu web và API là hai ngrok URLs khác nhau, web client dùng API URL đầy đủ:
+
+```txt
+VITE_API_BASE_URL=https://api-abc-123.ngrok-free.app/api/v1
+```
+
+### 2.4. Production domain thật
+
+Production nên dùng domain riêng cho từng tenant:
+
+```txt
+https://tienthang.example.vn
+https://danang.example.vn
+https://nhatrang.example.vn
+```
+
+DB tenant config tương ứng:
+
+```txt
+Tenant.code=tien-thang, Tenant.domain=tienthang.example.vn
+Tenant.code=da-nang,    Tenant.domain=danang.example.vn
+Tenant.code=nha-trang,  Tenant.domain=nhatrang.example.vn
+```
+
+Client gửi:
+
+```txt
+X-Tenant-Host: danang.example.vn
+```
+
+Production không nên dùng `?tenant=` làm cơ chế chính. Chỉ bật `ENABLE_TENANT_CODE_OVERRIDE=true` cho demo/admin nội bộ khi thật sự cần.
+
+## 3. Build Local
+
+Backend:
+
+```bash
+cd TravelSocialService
+npm run build
 npm run start:prod
 ```
 
-Ứng dụng mặc định chạy tại địa chỉ: [http://localhost:3000/api/v1](http://localhost:3000/api/v1)
+Web client:
 
-### Bước 7: Tắt ứng dụng và các dịch vụ đi kèm
-Khi muốn dừng dự án, bạn có thể thực hiện các bước sau:
+```bash
+cd TravelSocialWebApp
+npm run build
+npm run preview -- --host 0.0.0.0
+```
 
-#### A. Tắt ứng dụng NestJS
-* **Nếu đang chạy trực tiếp trên terminal (Foreground):** Nhấn tổ hợp phím `Ctrl + C` tại cửa sổ terminal đang chạy.
-* **Nếu ứng dụng bị chạy ngầm hoặc bị kẹt cổng (`EADDRINUSE: address already in use`):**
-  1. Tìm ID của tiến trình (PID) đang chạy trên cổng `3000`:
-     ```bash
-     lsof -i :3000
-     ```
-  2. Tắt tiến trình đó (thay `<PID>` bằng số tìm được ở bước trên, ví dụ `kill 70140`):
-     ```bash
-     kill <PID>
-     ```
-     *(Hoặc cưỡng ép tắt bằng `kill -9 <PID>` nếu tiến trình không phản hồi).*
+Preview web mặc định:
 
-#### B. Tắt cơ sở dữ liệu (PostgreSQL)
-Tùy thuộc vào cách bạn khởi động ở Bước 3:
-* **Nếu chạy qua Homebrew (macOS):**
-  ```bash
-  brew services stop postgresql@16
-  ```
-* **Nếu chạy qua Docker Compose:**
-  ```bash
-  docker compose down
-  ```
+```txt
+http://localhost:4173
+```
 
----
+## 4. Deploy
 
+### 4.1. Database
 
-## 📖 Tài liệu API (Swagger UI)
-Sau khi ứng dụng đã khởi động thành công, bạn có thể truy cập tài liệu Swagger tại:
-👉 [**http://localhost:3000/docs**](http://localhost:3000/docs)
+Dùng Supabase Free Postgres hoặc PostgreSQL managed bất kỳ. Lấy connection string và set:
 
-* Swagger đã được tích hợp sẵn cấu hình bảo mật Bearer Auth (JWT) để test các API yêu cầu quyền đăng nhập.
+```txt
+DATABASE_URL=postgresql://...
+```
 
----
+Chạy migration trên môi trường deploy:
 
-## 📚 Hướng dẫn các Tính năng Chi tiết
-Để xem tài liệu thiết kế và hướng dẫn vận hành chi tiết cho từng tính năng, bạn có thể tham khảo:
-* 🔐 [Hướng dẫn Xác thực & Phân quyền](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-auth.md)
-* 💾 [Hướng dẫn Quản lý Danh mục Địa danh](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-categories.md)
-* 🗺️ [Hướng dẫn Quản lý Khu vực Bản đồ](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-areas.md)
-* 🏛️ [Hướng dẫn Quản lý Địa danh & Câu chuyện](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-places.md)
-* 📁 [Hướng dẫn Tải lên & Lưu trữ Media](file:///Users/hungvovan/Documents/OfMe/TravelSocialService/docs/guide-upload.md)
+```bash
+npm run prisma:deploy
+npm run prisma:generate
+```
 
----
+Seed lần đầu nếu DB trống:
 
-## 🧪 Chạy Kiểm thử (Tests)
+```bash
+npm run db:seed:admin
+npm run tenant:seed:local
+npm run db:seed:categories
+```
 
-### Unit Tests
-Kiểm thử các đơn vị logic đơn lẻ:
+Chỉ chạy `npm run db:seed:mock-places` nếu muốn nạp dữ liệu mẫu Tiến Thắng.
+
+### 4.2. Backend deploy
+
+Build command:
+
+```bash
+npm install
+npm run prisma:generate
+npm run build
+```
+
+Start command:
+
+```bash
+npm run prisma:deploy
+npm run start:prod
+```
+
+Env production tối thiểu:
+
+```txt
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://...
+JWT_ACCESS_SECRET=<strong-secret>
+JWT_REFRESH_SECRET=<strong-secret>
+CORS_ORIGINS=https://tienthang.example.vn,https://danang.example.vn
+DEFAULT_TENANT_CODE=tien-thang
+ENABLE_TENANT_CODE_OVERRIDE=false
+STORAGE_PROVIDER=local
+STORAGE_LOCAL_BASE_URL=/media
+```
+
+Nếu dùng Cloudflare R2 cho media:
+
+```txt
+STORAGE_PROVIDER=r2
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=...
+R2_PUBLIC_BASE_URL=https://cdn.example.vn
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+```
+
+### 4.3. Web client deploy
+
+Build command trong repo web:
+
+```bash
+npm install
+npm run build
+```
+
+Nếu web gọi API domain riêng:
+
+```txt
+VITE_API_BASE_URL=https://api.example.vn/api/v1
+```
+
+Nếu web và API chung domain qua reverse proxy:
+
+```txt
+VITE_API_BASE_URL=/api/v1
+```
+
+Tất cả tenant domain trỏ về cùng bản web client. Tenant được phân biệt bằng `window.location.hostname`.
+
+## 5. Lệnh Tạo Và Gán User
+
+### 5.1. Tạo SUPER_ADMIN global
+
+Sửa `.env`:
+
+```txt
+SEED_ADMIN_EMAIL=admin@travelsocial.xyz
+SEED_ADMIN_USERNAME=admin
+SEED_ADMIN_PASSWORD=SuperSecureAdminPassword123!
+SEED_ADMIN_DISPLAY_NAME=Super Admin
+```
+
+Chạy:
+
+```bash
+npm run db:seed:admin
+```
+
+`SUPER_ADMIN` không cần thuộc tenant nào và có quyền hệ thống.
+
+### 5.2. Tạo admin tenant mới
+
+Tiến Thắng:
+
+```bash
+TENANT_CODE=tien-thang \
+ADMIN_EMAIL=admin.tienthang@example.com \
+ADMIN_USERNAME=admin_tienthang \
+ADMIN_PASSWORD=change-me \
+ADMIN_DISPLAY_NAME="Admin Tiến Thắng" \
+TENANT_USER_ROLE=OWNER \
+npm run tenant:admin:create
+```
+
+Đà Nẵng:
+
+```bash
+TENANT_CODE=da-nang \
+ADMIN_EMAIL=admin.danang@example.com \
+ADMIN_USERNAME=admin_danang \
+ADMIN_PASSWORD=change-me \
+ADMIN_DISPLAY_NAME="Admin Đà Nẵng" \
+TENANT_USER_ROLE=OWNER \
+npm run tenant:admin:create
+```
+
+### 5.3. Gán user đã tồn tại vào tenant
+
+```bash
+TENANT_CODE=da-nang \
+ADMIN_USERNAME=admin_danang \
+TENANT_USER_ROLE=ADMIN \
+npm run tenant:admin:assign
+```
+
+Role tenant hợp lệ:
+
+```txt
+OWNER
+ADMIN
+EDITOR
+VIEWER
+```
+
+## 6. Lệnh Tạo Tenant Và Dữ Liệu
+
+### 6.1. Seed dữ liệu từ file tenant
+
+Mỗi tenant có thư mục dữ liệu riêng trong `src/scripts/seed-data/tenants/<tenant-code>/`. Bạn có thể truyền `TENANT_CODE` làm đối số (argument) sau lệnh.
+
+> [!IMPORTANT]
+> **Lưu ý về cách chạy lệnh với npm**:
+> Để truyền đối số qua `npm run` thành công trên mọi môi trường và phiên bản npm, bạn **bắt buộc** phải sử dụng ký tự `--` trước khi điền mã tenant.
+> * Ví dụ đúng: `npm run tenant:seed:all -- tien-thang`
+> * Nếu không sử dụng `--` (ví dụ: `npm run tenant:seed:all tien-thang`), đối số có thể không được chuyển tiếp tới script gốc, dẫn tới việc hệ thống hiểu là `all` và chạy seed cho **tất cả** các tenant.
+
+Dưới đây là các nhóm lệnh đầy đủ được thiết lập sẵn cho từng tenant để bạn có thể copy-paste trực tiếp:
+
+#### A. Dành cho Tenant: Xã Tiến Thắng (`tien-thang`)
+
+* **Seed toàn bộ dữ liệu (Khuyên dùng)**:
+```bash
+npm run tenant:seed:all -- tien-thang
+```
+
+* **Chạy từng phần cụ thể**:
+  * Tạo cấu trúc tenant base (theme, map bounds, area với mã tỉnh/thành phố là `hanoi`):
+    ```bash
+    npm run tenant:seed:base -- tien-thang
+    ```
+  * Tạo/gán tài khoản admin của tenant:
+    ```bash
+    npm run tenant:seed:admins -- tien-thang
+    ```
+  * Seed Marker Icon và Danh mục địa điểm:
+    ```bash
+    npm run tenant:seed:categories -- tien-thang
+    ```
+  * Seed các địa điểm du lịch mẫu:
+    ```bash
+    npm run tenant:seed:places -- tien-thang
+    ```
+
+#### B. Dành cho Tenant: Thành phố Đà Nẵng (`da-nang`)
+
+* **Seed toàn bộ dữ liệu (Khuyên dùng)**:
+```bash
+npm run tenant:seed:all -- da-nang
+```
+
+* **Chạy từng phần cụ thể**:
+  * Tạo cấu trúc tenant base (theme, map bounds, area):
+    ```bash
+    npm run tenant:seed:base -- da-nang
+    ```
+  * Tạo/gán tài khoản admin của tenant:
+    ```bash
+    npm run tenant:seed:admins -- da-nang
+    ```
+  * Seed Marker Icon và Danh mục địa điểm:
+    ```bash
+    npm run tenant:seed:categories -- da-nang
+    ```
+  * Seed các địa điểm du lịch mẫu:
+    ```bash
+    npm run tenant:seed:places -- da-nang
+    ```
+
+#### C. Seed toàn bộ các tenant cùng lúc
+
+Để chạy seed dữ liệu cho tất cả các tenant cùng lúc:
+```bash
+npm run tenant:seed:all
+```
+
+hoặc:
+```bash
+npm run tenant:seed:all -- all
+```
+
+### 6.2. Tạo tenant nhanh bằng biến môi trường
+
+Lệnh này vẫn còn để tạo tenant cơ bản khi chưa muốn tạo file seed:
+
+```bash
+TENANT_CODE=nha-trang \
+TENANT_NAME="Thành phố Nha Trang" \
+TENANT_DOMAIN=nha-trang.localhost \
+TENANT_AREA_SLUG=nha-trang \
+TENANT_AREA_NAME="Thành phố Nha Trang" \
+TENANT_PROVINCE_CODE=56 \
+TENANT_CENTER_LAT=12.238791 \
+TENANT_CENTER_LNG=109.196749 \
+TENANT_RADIUS_KM=20 \
+npm run tenant:create
+```
+
+Lệnh này tạo `Tenant`, feature mặc định và area mặc định. Nó không tạo admin, category, place hoặc boundary GeoJSON từ file tenant mới.
+
+### 6.3. Scripts cũ
+
+Các script cũ vẫn còn để tương thích:
+
+```bash
+npm run tenant:seed:local
+npm run db:seed:categories
+npm run db:seed:areas
+npm run db:seed:mock-places
+```
+
+Luồng mới nên dùng `tenant:seed:*` vì dữ liệu đã được tách theo tenant.
+
+### 6.4. Xoá dữ liệu của một tenant
+
+Nếu bạn muốn xoá sạch toàn bộ dữ liệu của một tenant cụ thể (bao gồm thông tin tenant, các khu vực, địa điểm du lịch, và danh sách phân quyền admin thuộc tenant đó) mà không muốn ảnh hưởng tới dữ liệu của các tenant khác:
+
+```bash
+npm run tenant:delete -- <tenant-code>
+```
+
+Ví dụ xoá tenant Tiến Thắng:
+```bash
+npm run tenant:delete -- tien-thang
+```
+
+Lệnh này sử dụng cơ chế **Cascading Delete** trên cơ sở dữ liệu để xoá sạch tất cả các dữ liệu liên quan đến tenant đó một cách an toàn và triệt để.
+
+## 7. Dữ Liệu Default Lưu Ở Đâu
+
+Nguồn dữ liệu seed theo tenant nằm ở:
+
+```txt
+src/scripts/seed-data/tenants/
+```
+
+Các file chính:
+
+```txt
+src/scripts/seed-data/tenants/tien-thang/     <- Thư mục tenant Tiến Thắng
+  ├── admins.ts                               <- Định nghĩa admin user cho Tiến Thắng
+  ├── places.ts                               <- Địa điểm mẫu của Tiến Thắng
+  └── index.ts                                <- Tổng hợp cấu hình tenant, area và mapLayer
+src/scripts/seed-data/tenants/da-nang/        <- Thư mục tenant Đà Nẵng
+  ├── admins.ts                               <- Định nghĩa admin user cho Đà Nẵng
+  ├── places.ts                               <- Địa điểm mẫu của Đà Nẵng (hiện đang trống)
+  └── index.ts                                <- Tổng hợp cấu hình tenant, area và mapLayer
+src/scripts/seed-data/tenants/shared-categories.ts
+src/scripts/seed-data/tenants/index.ts
+src/scripts/seed-data/tenants/types.ts
+```
+
+Trong mỗi thư mục tenant, cấu trúc được phân rã như sau:
+- `admins.ts`: Chứa danh sách user admin tenant, mật khẩu local/demo, role tenant.
+- `places.ts`: Chứa danh sách địa điểm mẫu của riêng tenant đó.
+- `index.ts`: Chứa thông tin base của tenant bao gồm: code, name, domain, theme, settings, area mặc định, map layer/boundary, và gộp chung với `admins`, `places` cùng categories mặc định.
+
+Muốn thêm tenant mới:
+
+1. Tạo thư mục mới dưới `src/scripts/seed-data/tenants/`, ví dụ: `src/scripts/seed-data/tenants/nha-trang/`.
+2. Tạo các file `admins.ts`, `places.ts` và `index.ts` bên trong thư mục đó tương tự như Đà Nẵng hay Tiến Thắng.
+3. Thêm import và khai báo tenant mới vào map trong `src/scripts/seed-data/tenants/index.ts`.
+4. Chạy lệnh:
+
+```bash
+npm run tenant:seed:all -- nha-trang
+```
+
+`src/scripts/tenant-script-utils.ts` vẫn còn các helper seed dùng chung. `LOCAL_TENANTS` hiện đọc lại từ `src/scripts/seed-data/tenants/`, nên không cần sửa trực tiếp trong file util này khi thêm tenant mới.
+
+```txt
+src/scripts/seed-data/
+```
+
+Chứa GeoJSON boundary:
+
+```txt
+src/scripts/seed-data/tien-thang.geojson
+src/scripts/seed-data/da-nang.geojson
+```
+
+Muốn thêm boundary cho tenant mới, thêm file GeoJSON vào đây rồi khai báo `geoJsonFile` trong `tenant.mapLayer` của file tenant tương ứng.
+
+```txt
+src/scripts/seed-categories.ts
+```
+
+Script legacy seed category global. Luồng mới nên sửa danh mục trong:
+
+```txt
+src/scripts/seed-data/tenants/shared-categories.ts
+```
+
+hoặc override `categories` ngay trong file tenant riêng.
+
+Lưu ý hiện tại trong DB, `PlaceCategory` vẫn là global catalog, chưa có `tenantId`. Các file tenant giúp tách source seed theo tenant; nếu cần danh mục thật sự khác nhau theo tenant trong database, cần thêm migration `tenantId` cho `PlaceCategory` và cập nhật API filter theo tenant.
+
+```txt
+src/scripts/seed-mock-places.ts
+```
+
+Script legacy seed địa điểm Tiến Thắng. Luồng mới nên sửa địa điểm trong `places` của từng file tenant:
+
+```txt
+src/scripts/seed-data/tenants/tien-thang.ts
+src/scripts/seed-data/tenants/da-nang.ts
+```
+
+```txt
+data_fake/
+```
+
+Chứa media mẫu để seed:
+
+```txt
+data_fake/image.png
+data_fake/video.mp4
+```
+
+```txt
+.env
+```
+
+Chứa thông tin tài khoản `SUPER_ADMIN` mặc định:
+
+```txt
+SEED_ADMIN_EMAIL=...
+SEED_ADMIN_USERNAME=...
+SEED_ADMIN_PASSWORD=...
+SEED_ADMIN_DISPLAY_NAME=...
+```
+
+## 8. API Kiểm Tra Nhanh
+
+Tenant config:
+
+```bash
+curl 'http://localhost:3000/api/v1/tenant/config?tenant=tien-thang'
+curl 'http://localhost:3000/api/v1/tenant/config?tenant=da-nang'
+```
+
+Map config:
+
+```bash
+curl 'http://localhost:3000/api/v1/areas/tien-thang/map-config?tenant=tien-thang'
+curl 'http://localhost:3000/api/v1/areas/da-nang/map-config?tenant=da-nang'
+```
+
+Danh sách places theo area:
+
+```bash
+curl 'http://localhost:3000/api/v1/areas/tien-thang/places?tenant=tien-thang'
+curl 'http://localhost:3000/api/v1/areas/da-nang/places?tenant=da-nang'
+```
+
+Swagger:
+
+```txt
+http://localhost:3000/docs
+```
+
+## 9. Quy Tắc Multi-tenant
+
+- Không nhận `tenantId` từ client public để query dữ liệu.
+- Public/admin API phải lấy tenant từ `request.tenant`.
+- Admin tenant phải có record `TenantUser` active trong tenant hiện tại.
+- `SUPER_ADMIN` là quyền hệ thống, không cần membership tenant.
+- Slug area/place unique theo tenant, không unique toàn hệ thống.
+- Production dùng domain thật; `?tenant=` chỉ dành cho local/demo/ngrok free.
+
+## 10. Test
+
 ```bash
 npm run test
-```
-
-### E2E (End-to-End) Tests
-Kiểm thử toàn bộ luồng API (Database đã được mock sẵn trong môi trường test nên không cần chạy Database thật):
-```bash
 npm run test:e2e
-```
-
-### Test Coverage
-Xem báo cáo độ phủ của kiểm thử:
-```bash
 npm run test:cov
 ```
 
----
+## 11. Prisma Engine Offline/Proxy Note
 
-## Prisma engine offline/proxy note
-
-Các script Prisma trong `package.json` được giữ portable để chạy được trên macOS/Linux/Render:
+Các script Prisma trong `package.json` giữ portable để chạy được trên macOS/Linux/Render:
 
 ```bash
 npm run prisma:generate
@@ -221,11 +730,11 @@ npm run prisma:migrate
 npm run prisma:deploy
 ```
 
-Trong trường hợp môi trường local bị chặn khi tải Prisma engine binaries (`binaries.prisma.sh`), có thể thêm tạm các biến sau vào `.env` nếu file engine tương ứng đã tồn tại trong `node_modules/@prisma/engines`:
+Nếu local bị chặn tải Prisma engine binaries, có thể thêm tạm vào `.env` khi file engine tương ứng đã tồn tại trong `node_modules/@prisma/engines`:
 
 ```txt
 PRISMA_QUERY_ENGINE_LIBRARY=./node_modules/@prisma/engines/libquery_engine-darwin-arm64.dylib.node
 PRISMA_SCHEMA_ENGINE_BINARY=./node_modules/@prisma/engines/schema-engine-darwin-arm64
 ```
 
-Không hard-code các biến này vào `package.json`, vì deployment free trên Linux cần engine khác.
+Không hard-code các biến này vào `package.json`, vì deployment Linux cần engine khác.

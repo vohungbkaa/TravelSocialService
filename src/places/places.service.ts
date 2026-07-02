@@ -14,6 +14,8 @@ import { slugify } from '../common/utils/slugify';
 import { normalizeMediaUrls } from '../common/utils/media-url';
 import { Prisma, PlaceStatus, PriceLevel } from '@prisma/client';
 import * as crypto from 'crypto';
+import { TenantContext } from '../tenants/tenant-context.type';
+import { TenantsService } from '../tenants/tenants.service';
 
 const placeInclude = {
   category: { include: { markerIcon: true } },
@@ -32,9 +34,13 @@ const placeListInclude = {
 
 @Injectable()
 export class PlacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantsService: TenantsService,
+  ) {}
 
-  async create(dto: CreatePlaceDto, userId: string) {
+  async create(dto: CreatePlaceDto, userId: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
     this.validateCosts(dto.estimatedMinCost, dto.estimatedMaxCost);
 
     // Validate or assign Category
@@ -64,8 +70,8 @@ export class PlacesService {
 
     // Validate Area exists if provided
     if (dto.areaId) {
-      const area = await this.prisma.area.findUnique({
-        where: { id: dto.areaId },
+      const area = await this.prisma.area.findFirst({
+        where: { id: dto.areaId, tenantId: currentTenant.id },
       });
       if (!area) {
         throw new NotFoundException('AREA_NOT_FOUND');
@@ -74,10 +80,11 @@ export class PlacesService {
 
     await this.validateMarkerIcon(dto.markerIconId);
 
-    const slug = await this.generateUniquePlaceSlug(dto.name);
+    const slug = await this.generateUniquePlaceSlug(dto.name, currentTenant.id);
 
     const place = await this.prisma.place.create({
       data: {
+        tenantId: currentTenant.id,
         name: dto.name,
         slug,
         summary: dto.summary,
@@ -112,9 +119,10 @@ export class PlacesService {
     return normalizeMediaUrls(place);
   }
 
-  async update(id: string, dto: UpdatePlaceDto) {
-    const existing = await this.prisma.place.findUnique({
-      where: { id },
+  async update(id: string, dto: UpdatePlaceDto, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const existing = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
     });
     if (!existing) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -155,8 +163,8 @@ export class PlacesService {
     }
 
     if (dto.areaId) {
-      const area = await this.prisma.area.findUnique({
-        where: { id: dto.areaId },
+      const area = await this.prisma.area.findFirst({
+        where: { id: dto.areaId, tenantId: currentTenant.id },
       });
       if (!area) {
         throw new NotFoundException('AREA_NOT_FOUND');
@@ -167,7 +175,7 @@ export class PlacesService {
 
     let slug = existing.slug;
     if (dto.name && dto.name !== existing.name) {
-      slug = await this.generateUniquePlaceSlug(dto.name);
+      slug = await this.generateUniquePlaceSlug(dto.name, currentTenant.id);
     }
 
     const data: Prisma.PlaceUpdateInput = {
@@ -216,9 +224,10 @@ export class PlacesService {
     return normalizeMediaUrls(place);
   }
 
-  async publish(id: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id },
+  async publish(id: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -243,9 +252,10 @@ export class PlacesService {
     return normalizeMediaUrls(updatedPlace);
   }
 
-  async unpublish(id: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id },
+  async unpublish(id: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -259,8 +269,10 @@ export class PlacesService {
     return normalizeMediaUrls(updatedPlace);
   }
 
-  async findAllAdmin() {
+  async findAllAdmin(tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
     const places = await this.prisma.place.findMany({
+      where: { tenantId: currentTenant.id },
       include: placeListInclude,
       orderBy: { createdAt: 'desc' },
     });
@@ -268,9 +280,10 @@ export class PlacesService {
     return normalizeMediaUrls(places);
   }
 
-  async findOneAdmin(id: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id },
+  async findOneAdmin(id: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
       include: placeListInclude,
     });
     if (!place) {
@@ -279,9 +292,10 @@ export class PlacesService {
     return normalizeMediaUrls(place);
   }
 
-  async remove(id: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id },
+  async remove(id: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -295,9 +309,10 @@ export class PlacesService {
 
   // --- Place Images Gallery Operations ---
 
-  async addImage(placeId: string, dto: CreatePlaceImageDto) {
-    const place = await this.prisma.place.findUnique({
-      where: { id: placeId },
+  async addImage(placeId: string, dto: CreatePlaceImageDto, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id: placeId, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -315,9 +330,10 @@ export class PlacesService {
     return normalizeMediaUrls(image);
   }
 
-  async updateImage(placeId: string, imageId: string, dto: UpdatePlaceImageDto) {
-    const place = await this.prisma.place.findUnique({
-      where: { id: placeId },
+  async updateImage(placeId: string, imageId: string, dto: UpdatePlaceImageDto, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id: placeId, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -341,9 +357,10 @@ export class PlacesService {
     return normalizeMediaUrls(updatedImage);
   }
 
-  async deleteImage(placeId: string, imageId: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id: placeId },
+  async deleteImage(placeId: string, imageId: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id: placeId, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -363,9 +380,10 @@ export class PlacesService {
     return { success: true };
   }
 
-  async updateMediaLinks(placeId: string, dto: UpdateMediaLinksDto) {
-    const place = await this.prisma.place.findUnique({
-      where: { id: placeId },
+  async updateMediaLinks(placeId: string, dto: UpdateMediaLinksDto, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id: placeId, tenantId: currentTenant.id },
     });
     if (!place) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -394,9 +412,10 @@ export class PlacesService {
     return categories.map((category) => this.withCategoryIconAsset(category));
   }
 
-  async findImagesPublic(placeId: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id: placeId },
+  async findImagesPublic(placeId: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id: placeId, tenantId: currentTenant.id },
     });
     if (!place || place.status !== PlaceStatus.PUBLISHED) {
       throw new NotFoundException('PLACE_NOT_FOUND');
@@ -410,10 +429,12 @@ export class PlacesService {
     return normalizeMediaUrls(images);
   }
 
-  async findAllPublic(query: ListPlacesQueryDto) {
+  async findAllPublic(query: ListPlacesQueryDto, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
     const { q, areaSlug, areaId, category, provinceCode, priceLevel, limit = 20, cursor, sort } = query;
 
     const where: Prisma.PlaceWhereInput = {
+      tenantId: currentTenant.id,
       status: PlaceStatus.PUBLISHED,
     };
 
@@ -427,7 +448,7 @@ export class PlacesService {
     if (areaId) {
       where.areaId = areaId;
     } else if (areaSlug) {
-      where.area = { slug: areaSlug };
+      where.area = { tenantId: currentTenant.id, slug: areaSlug };
     }
 
     if (category) {
@@ -471,9 +492,10 @@ export class PlacesService {
     };
   }
 
-  async findOnePublic(id: string) {
-    const place = await this.prisma.place.findUnique({
-      where: { id },
+  async findOnePublic(id: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
+    const place = await this.prisma.place.findFirst({
+      where: { id, tenantId: currentTenant.id },
       include: placeInclude,
     });
 
@@ -484,9 +506,10 @@ export class PlacesService {
     return normalizeMediaUrls(place);
   }
 
-  async findOnePublicBySlug(slug: string) {
+  async findOnePublicBySlug(slug: string, tenant?: TenantContext) {
+    const currentTenant = await this.tenantsService.requireTenant(tenant);
     const place = await this.prisma.place.findUnique({
-      where: { slug },
+      where: { tenantId_slug: { tenantId: currentTenant.id, slug } },
       include: placeInclude,
     });
 
@@ -652,14 +675,14 @@ export class PlacesService {
     }
   }
 
-  private async generateUniquePlaceSlug(name: string): Promise<string> {
+  private async generateUniquePlaceSlug(name: string, tenantId: string): Promise<string> {
     const baseSlug = slugify(name);
     let slug = baseSlug;
     let count = 0;
 
     while (true) {
       const existing = await this.prisma.place.findUnique({
-        where: { slug },
+        where: { tenantId_slug: { tenantId, slug } },
       });
 
       if (!existing) {

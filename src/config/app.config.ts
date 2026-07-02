@@ -23,8 +23,14 @@ export default registerAs('app', () => ({
     localBaseUrl: process.env.STORAGE_LOCAL_BASE_URL || '/media',
   },
   corsOrigins: (
-    process.env.CORS_ORIGINS || 'http://localhost:3000,http://localhost:5173'
+    process.env.CORS_ORIGINS ||
+    'http://localhost:3000,http://localhost:5173,http://tien-thang.localhost:5173,http://da-nang.localhost:5173,https://*.ngrok-free.app'
   )
     .split(',')
-    .map((origin) => origin.trim()),
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+  tenant: {
+    defaultCode: process.env.DEFAULT_TENANT_CODE || 'tien-thang',
+    enableCodeOverride: process.env.ENABLE_TENANT_CODE_OVERRIDE === 'true',
+  },
 }));

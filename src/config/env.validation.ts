@@ -30,7 +30,9 @@ export const envSchema = z.object({
     .default('/media'),
   CORS_ORIGINS: z
     .string()
-    .default('http://localhost:3000,http://localhost:5173'),
+    .default('http://localhost:3000,http://localhost:5173,http://tien-thang.localhost:5173,http://da-nang.localhost:5173,https://*.ngrok-free.app'),
+  DEFAULT_TENANT_CODE: z.string().default('tien-thang'),
+  ENABLE_TENANT_CODE_OVERRIDE: z.enum(['true', 'false']).default('false'),
 });
 
 export type Env = z.infer<typeof envSchema>;

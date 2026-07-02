@@ -45,9 +45,17 @@ async function main() {
     }
     console.log(`Using Admin user: ${admin.username} (${admin.id})`);
 
-    // 2. Check Area
+    // 2. Check Tenant and Area
+    const tenant = await prisma.tenant.findUnique({
+      where: { code: 'tien-thang' },
+    });
+    if (!tenant) {
+      console.error('Tenant "tien-thang" not found. Please run "npm run tenant:seed:local" first.');
+      process.exit(1);
+    }
+
     const area = await prisma.area.findUnique({
-      where: { slug: 'tien-thang' },
+      where: { tenantId_slug: { tenantId: tenant.id, slug: 'tien-thang' } },
     });
     if (!area) {
       console.error('Area "tien-thang" not found. Please run "npm run db:seed:areas" first.');
@@ -152,7 +160,7 @@ async function main() {
       
       // Cleanup existing place with same name/slug to allow re-runs
       const existingPlace = await prisma.place.findFirst({
-        where: { name: placeData.name }
+        where: { tenantId: tenant.id, name: placeData.name }
       });
       if (existingPlace) {
         console.log(`  Deleting existing place: ${placeData.name}`);
@@ -173,7 +181,7 @@ async function main() {
         localTip: placeData.localTip,
         address: placeData.address,
         priceLevel: 'FREE',
-      }, admin.id);
+      }, admin.id, tenant);
 
       console.log(`  Place created with ID: ${place.id}. Adding gallery images...`);
 
@@ -183,11 +191,11 @@ async function main() {
           imageUrl: coverUrl,
           caption: placeData.galleryCaptions[i],
           sortOrder: i,
-        });
+        }, tenant);
       }
 
       console.log(`  Publishing place: ${place.name}...`);
-      await placesService.publish(place.id);
+      await placesService.publish(place.id, tenant);
     }
 
     console.log('Seeding mock places completed successfully.');

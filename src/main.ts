@@ -7,6 +7,24 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import * as path from 'path';
 
+function isCorsOriginAllowed(origin: string | undefined, allowedOrigins: string[]) {
+  if (!origin) {
+    return true;
+  }
+
+  return allowedOrigins.some((allowedOrigin) => {
+    if (allowedOrigin === '*') {
+      return true;
+    }
+    if (!allowedOrigin.includes('*')) {
+      return allowedOrigin === origin;
+    }
+
+    const [prefix, suffix] = allowedOrigin.split('*');
+    return origin.startsWith(prefix) && origin.endsWith(suffix);
+  });
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
@@ -21,7 +39,9 @@ async function bootstrap() {
   app.use('/media', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      callback(null, isCorsOriginAllowed(origin, corsOrigins));
+    },
     credentials: true,
   });
 

@@ -19,6 +19,13 @@ enum UserRole {
   SUPER_ADMIN
 }
 
+enum TenantUserRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
 enum PlaceStatus {
   DRAFT
   PUBLISHED
@@ -30,6 +37,63 @@ enum PriceLevel {
   LOW
   MEDIUM
   HIGH
+}
+
+enum MapLayerType {
+  BOUNDARY
+  MASK
+  ROUTE
+  CUSTOM
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  domain    String   @unique
+  enabled   Boolean  @default(true)
+  theme     Json?
+  settings  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     TenantUser[]
+  features  TenantFeature[]
+  areas     Area[]
+  mapLayers TenantMapLayer[]
+  places    Place[]
+}
+
+model TenantUser {
+  id        String         @id @default(uuid())
+  tenantId  String
+  userId    String
+  role      TenantUserRole @default(ADMIN)
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId, active])
+  @@index([tenantId, active])
+}
+
+model TenantFeature {
+  id        String   @id @default(uuid())
+  tenantId  String
+  feature   String
+  enabled   Boolean  @default(true)
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, feature])
+  @@index([feature])
 }
 
 model User {
@@ -46,6 +110,7 @@ model User {
   profile      UserProfile?
   refreshTokens RefreshToken[]
   places       Place[]
+  tenants      TenantUser[]
 }
 
 model UserProfile {
@@ -78,8 +143,9 @@ model RefreshToken {
 
 model Area {
   id              String   @id @default(uuid())
+  tenantId        String
   name            String
-  slug            String   @unique
+  slug            String
   provinceCode    String?
   description     String?
   coverUrl        String?
@@ -89,7 +155,39 @@ model Area {
   published       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   places          Place[]
+  mapLayers       TenantMapLayer[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, published])
+}
+
+model TenantMapLayer {
+  id         String       @id @default(uuid())
+  tenantId   String
+  areaId     String?
+  key        String
+  name       String
+  type       MapLayerType @default(BOUNDARY)
+  enabled    Boolean      @default(true)
+  sortOrder  Int          @default(0)
+  geoJson    Json?
+  geoJsonUrl String?
+  style      Json?
+  bounds     Json?
+  centerLat  Decimal?
+  centerLng  Decimal?
+  zoom       Decimal?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  area       Area?        @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId, enabled, sortOrder])
+  @@index([areaId])
 }
 
 model PlaceCategory {
@@ -123,9 +221,10 @@ model MarkerIcon {
 
 model Place {
   id                          String      @id @default(uuid())
+  tenantId                    String
   areaId                      String?
   name                        String
-  slug                        String      @unique
+  slug                        String
   summary                     String?
   description                 String?
   localTip                    String?
@@ -156,11 +255,15 @@ model Place {
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime    @updatedAt
   area                        Area?       @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  tenant                      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category                    PlaceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   markerIcon                  MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
   creator                     User?       @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   images                      PlaceImage[]
 
+  @@unique([tenantId, slug])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, areaId, sortOrder])
   @@index([areaId, sortOrder])
   @@index([categoryId])
   @@index([markerIconId])

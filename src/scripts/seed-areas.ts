@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { LOCAL_TENANTS, upsertTenantBundle } from './tenant-script-utils';
 
 async function main() {
   const prisma = new PrismaClient();
@@ -6,7 +7,7 @@ async function main() {
   const areaData = {
     slug: 'tien-thang',
     name: 'Xã Tiến Thắng',
-    provinceCode: 'hn',
+    provinceCode: 'hanoi',
     centerLat: 21.195,
     centerLng: 105.6775,
     defaultRadiusKm: 3.0,
@@ -16,27 +17,17 @@ async function main() {
 
   try {
     console.log('Seeding map areas...');
-    await prisma.area.upsert({
-      where: { slug: areaData.slug },
-      update: {
-        name: areaData.name,
-        provinceCode: areaData.provinceCode,
-        centerLat: areaData.centerLat,
-        centerLng: areaData.centerLng,
-        defaultRadiusKm: areaData.defaultRadiusKm,
-        published: areaData.published,
-        description: areaData.description
+    const tenantSeed = LOCAL_TENANTS.find((tenant) => tenant.code === 'tien-thang');
+    if (!tenantSeed) {
+      throw new Error('Missing tien-thang tenant seed');
+    }
+
+    await upsertTenantBundle(prisma, {
+      ...tenantSeed,
+      area: {
+        ...tenantSeed.area,
+        ...areaData,
       },
-      create: {
-        slug: areaData.slug,
-        name: areaData.name,
-        provinceCode: areaData.provinceCode,
-        centerLat: areaData.centerLat,
-        centerLng: areaData.centerLng,
-        defaultRadiusKm: areaData.defaultRadiusKm,
-        published: areaData.published,
-        description: areaData.description
-      }
     });
     console.log('Seeding areas completed successfully.');
   } catch (error) {
