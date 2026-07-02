@@ -54,6 +54,11 @@ export class CreatePlaceDto {
   @IsOptional()
   categoryId?: number;
 
+  @ApiProperty({ example: 1, required: false, description: 'Optional marker icon override for this place' })
+  @IsInt()
+  @IsOptional()
+  markerIconId?: number | null;
+
   @ApiProperty({ example: 'area-uuid-here', required: false })
   @IsString()
   @IsOptional()

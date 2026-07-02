@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { slugify } from '../common/utils/slugify';
+import { normalizeMediaUrls } from '../common/utils/media-url';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -33,13 +34,14 @@ export class AreasService {
       },
     });
 
-    return area;
+    return normalizeMediaUrls(area);
   }
 
   async findAllAdmin() {
-    return this.prisma.area.findMany({
+    const areas = await this.prisma.area.findMany({
       orderBy: { createdAt: 'desc' },
     });
+    return normalizeMediaUrls(areas);
   }
 
   async findOneAdmin(id: string) {
@@ -49,7 +51,7 @@ export class AreasService {
     if (!area) {
       throw new NotFoundException('AREA_NOT_FOUND');
     }
-    return area;
+    return normalizeMediaUrls(area);
   }
 
   async update(id: string, dto: UpdateAreaDto) {
@@ -88,10 +90,11 @@ export class AreasService {
       data.defaultRadiusKm = new Prisma.Decimal(dto.defaultRadiusKm);
     }
 
-    return this.prisma.area.update({
+    const area = await this.prisma.area.update({
       where: { id },
       data,
     });
+    return normalizeMediaUrls(area);
   }
 
   async remove(id: string) {
@@ -115,10 +118,11 @@ export class AreasService {
   // --- Public APIs ---
 
   async findAllPublic() {
-    return this.prisma.area.findMany({
+    const areas = await this.prisma.area.findMany({
       where: { published: true },
       orderBy: { name: 'asc' },
     });
+    return normalizeMediaUrls(areas);
   }
 
   async findOnePublic(slug: string) {
@@ -130,24 +134,26 @@ export class AreasService {
       throw new NotFoundException('AREA_NOT_FOUND');
     }
 
-    return area;
+    return normalizeMediaUrls(area);
   }
 
   async findPlacesPublic(slug: string) {
     const area = await this.findOnePublic(slug);
 
-    return this.prisma.place.findMany({
+    const places = await this.prisma.place.findMany({
       where: {
         areaId: area.id,
         status: 'PUBLISHED',
       },
       include: {
-        category: true,
+        category: { include: { markerIcon: true } },
+        markerIcon: true,
         images: {
           orderBy: { sortOrder: 'asc' },
         },
       },
       orderBy: { sortOrder: 'asc' },
     });
+    return normalizeMediaUrls(places);
   }
 }

@@ -98,9 +98,26 @@ model PlaceCategory {
   name        String
   description String?
   icon        String?
+  iconUrl     String?
+  markerColor String?
+  markerIconId Int?
+  markerIcon   MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  places      Place[]
+}
+
+model MarkerIcon {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  name        String
+  iconUrl     String
+  markerColor String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  categories  PlaceCategory[]
   places      Place[]
 }
 
@@ -115,6 +132,7 @@ model Place {
   bestTime                    String?
   priceRange                  String?
   categoryId                  Int
+  markerIconId                Int?
   address                     String?
   provinceCode                String?
   districtCode                String?
@@ -139,11 +157,13 @@ model Place {
   updatedAt                   DateTime    @updatedAt
   area                        Area?       @relation(fields: [areaId], references: [id], onDelete: SetNull)
   category                    PlaceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  markerIcon                  MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
   creator                     User?       @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   images                      PlaceImage[]
 
   @@index([areaId, sortOrder])
   @@index([categoryId])
+  @@index([markerIconId])
   @@index([provinceCode])
   @@index([status, createdAt])
 }
