@@ -11,6 +11,7 @@ import { UploadModule } from './upload/upload.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { TenantResolverMiddleware } from './tenants/tenant-resolver.middleware';
 import { TenantAccessGuard } from './tenants/tenant-access.guard';
+import { NewsModule } from './news/news.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -25,6 +26,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AreasModule,
     PlacesModule,
     UploadModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [
