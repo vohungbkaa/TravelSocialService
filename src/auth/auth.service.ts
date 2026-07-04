@@ -90,6 +90,7 @@ export class AuthService {
       },
       include: {
         profile: true,
+        tenants: true,
       },
     });
 
@@ -112,7 +113,7 @@ export class AuthService {
     }
 
     // Generate Tokens
-    const accessToken = this.generateAccessToken(user.id, user.username, user.role);
+    const accessToken = this.generateAccessToken(user.id, user.username, user.role, user.tenants, user.profile);
     const refreshToken = await this.generateAndStoreRefreshToken(user.id);
 
     return {
@@ -137,6 +138,7 @@ export class AuthService {
         user: {
           include: {
             profile: true,
+            tenants: true,
           },
         },
       },
@@ -177,7 +179,7 @@ export class AuthService {
         },
       });
 
-      const access = this.generateAccessToken(user.id, user.username, user.role);
+      const access = this.generateAccessToken(user.id, user.username, user.role, user.tenants, user.profile);
       return { accessToken: access, newRefreshToken: rawToken };
     });
 
@@ -211,8 +213,11 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private generateAccessToken(userId: string, username: string, role: UserRole): string {
-    const payload = { sub: userId, username, role };
+  private generateAccessToken(userId: string, username: string, role: UserRole, tenants: any[] = [], profile: any = null): string {
+    const tenantRoles = tenants.map(t => ({ tenantId: t.tenantId, role: t.role }));
+    const displayName = profile?.displayName || username;
+    const avatar = profile?.avatarMediaId || null;
+    const payload = { sub: userId, username, role, tenantRoles, displayName, avatar };
     return this.jwtService.sign(payload);
   }
 
