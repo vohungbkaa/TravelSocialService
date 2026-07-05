@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import type { TenantContext } from '../tenants/tenant-context.type';
+import { CreateNewsDto } from './dto/create-news.dto';
 
 @Injectable()
 export class NewsService {
@@ -23,6 +24,38 @@ export class NewsService {
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async create(dto: CreateNewsDto, user: { userId: string }, tenant: TenantContext) {
+    const imagesData = dto.imageUrls?.map((url, index) => ({
+      imageUrl: url,
+      sortOrder: index,
+    })) || [];
+
+    return this.prisma.post.create({
+      data: {
+        tenantId: tenant.id,
+        authorId: user.userId,
+        content: dto.content,
+        category: dto.category,
+        images: {
+          create: imagesData,
+        },
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            profile: true,
+          },
+        },
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
     });
   }
 

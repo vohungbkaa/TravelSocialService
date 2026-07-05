@@ -1,5 +1,6 @@
-import { Controller, Get, Delete, Param } from '@nestjs/common';
+import { Controller, Get, Delete, Param, Post, Body } from '@nestjs/common';
 import { NewsService } from './news.service';
+import { CreateNewsDto } from './dto/create-news.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -16,6 +17,17 @@ export class NewsController {
   @ApiOperation({ summary: 'List all news posts for the current tenant' })
   async findAll(@CurrentTenant() tenant: TenantContext) {
     const data = await this.newsService.findAll(tenant);
+    return { data };
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new news post' })
+  async create(
+    @Body() dto: CreateNewsDto,
+    @CurrentUser() user: any,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    const data = await this.newsService.create(dto, user, tenant);
     return { data };
   }
 
