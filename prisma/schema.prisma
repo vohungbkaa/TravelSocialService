@@ -113,8 +113,9 @@ model User {
   places       Place[]
   tenants      TenantUser[]
   posts        Post[]
-  postComments PostComment[]
-  postLikes    PostLike[]
+  postComments  PostComment[]
+  postReactions PostReaction[]
+  commentLikes  CommentLike[]
 }
 
 model UserProfile {
@@ -301,7 +302,7 @@ model Post {
   images        PostImage[]
   attachments   PostAttachment[]
   comments      PostComment[]
-  likes         PostLike[]
+  reactions     PostReaction[]
 
   @@index([tenantId, createdAt])
   @@index([authorId])
@@ -341,24 +342,39 @@ model PostAttachment {
 }
 
 model PostComment {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   postId    String
   authorId  String
   content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mediaUrl  String?
+  mediaType String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
 }
 
-model PostLike {
+model PostReaction {
   postId    String
   userId    String
+  type      String   @default("LIKE")
   createdAt DateTime @default(now())
 
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([postId, userId])
+}
+
+model CommentLike {
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
 }
