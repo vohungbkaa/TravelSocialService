@@ -299,6 +299,7 @@ model Post {
   tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   images        PostImage[]
+  attachments   PostAttachment[]
   comments      PostComment[]
   likes         PostLike[]
 
@@ -314,6 +315,29 @@ model PostImage {
   createdAt DateTime @default(now())
 
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+enum PostAttachmentType {
+  IMAGE
+  VIDEO
+  FILE
+  LINK
+}
+
+model PostAttachment {
+  id        String             @id @default(uuid())
+  postId    String
+  type      PostAttachmentType
+  url       String
+  title     String?
+  mimeType  String?
+  size      Int?
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+
+  post      Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, sortOrder])
 }
 
 model PostComment {
