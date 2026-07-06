@@ -116,6 +116,7 @@ model User {
   postComments  PostComment[]
   postReactions PostReaction[]
   commentLikes  CommentLike[]
+  postShares    PostShare[]
 }
 
 model UserProfile {
@@ -294,6 +295,7 @@ model Post {
   category      String?
   likesCount    Int           @default(0)
   commentsCount Int           @default(0)
+  sharesCount   Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -303,6 +305,7 @@ model Post {
   attachments   PostAttachment[]
   comments      PostComment[]
   reactions     PostReaction[]
+  shares        PostShare[]
 
   @@index([tenantId, createdAt])
   @@index([authorId])
@@ -377,4 +380,17 @@ model CommentLike {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([commentId, userId])
+}
+
+model PostShare {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
 }

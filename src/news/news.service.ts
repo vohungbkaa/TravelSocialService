@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 import type { TenantContext } from '../tenants/tenant-context.type';
 import {
   CreateNewsAttachmentDto,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class NewsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async findAll(tenant: TenantContext) {
     return this.prisma.post.findMany({
@@ -493,5 +497,43 @@ export class NewsService {
       });
       return { liked: true, count: likesCount };
     }
+  }
+
+  async share(id: string, token: string | null, tenant: TenantContext) {
+    const post = await this.prisma.post.findUnique({
+      where: { id, tenantId: tenant.id },
+    });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    let userId: string | null = null;
+    if (token) {
+      try {
+        const payload = this.jwtService.verify(token);
+        userId = payload.sub;
+      } catch (err) {
+        // Ignore token errors
+      }
+    }
+
+    const [updatedPost] = await this.prisma.$transaction([
+      this.prisma.post.update({
+        where: { id },
+        data: {
+          sharesCount: {
+            increment: 1,
+          },
+        },
+      }),
+      this.prisma.postShare.create({
+        data: {
+          postId: id,
+          userId: userId || null,
+        },
+      }),
+    ]);
+
+    return updatedPost;
   }
 }

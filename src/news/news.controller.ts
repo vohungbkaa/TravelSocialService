@@ -6,6 +6,7 @@ import {
   Post,
   Body,
   Patch,
+  Headers,
 } from '@nestjs/common';
 import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
@@ -125,6 +126,22 @@ export class NewsController {
       user,
       tenant,
     );
+    return { data };
+  }
+
+  @Post(':id/share')
+  @Public()
+  @ApiOperation({ summary: 'Share a news post' })
+  async share(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader: string | undefined,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    let token: string | null = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    const data = await this.newsService.share(id, token, tenant);
     return { data };
   }
 }
