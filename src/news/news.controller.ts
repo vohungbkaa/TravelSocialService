@@ -1,4 +1,12 @@
-import { Controller, Get, Delete, Param, Post, Body, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Delete,
+  Param,
+  Post,
+  Body,
+  Patch,
+} from '@nestjs/common';
 import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { Public } from '../common/decorators/public.decorator';
@@ -17,6 +25,17 @@ export class NewsController {
   @ApiOperation({ summary: 'List all news posts for the current tenant' })
   async findAll(@CurrentTenant() tenant: TenantContext) {
     const data = await this.newsService.findAll(tenant);
+    return { data };
+  }
+
+  @Get(':id')
+  @Public()
+  @ApiOperation({ summary: 'Get a news post detail' })
+  async findOne(
+    @Param('id') id: string,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    const data = await this.newsService.findOne(id, tenant);
     return { data };
   }
 
@@ -85,7 +104,12 @@ export class NewsController {
     @CurrentUser() user: any,
     @CurrentTenant() tenant: TenantContext,
   ) {
-    const data = await this.newsService.togglePostReaction(id, dto.type, user, tenant);
+    const data = await this.newsService.togglePostReaction(
+      id,
+      dto.type,
+      user,
+      tenant,
+    );
     return { data };
   }
 
@@ -96,7 +120,11 @@ export class NewsController {
     @CurrentUser() user: any,
     @CurrentTenant() tenant: TenantContext,
   ) {
-    const data = await this.newsService.toggleCommentLike(commentId, user, tenant);
+    const data = await this.newsService.toggleCommentLike(
+      commentId,
+      user,
+      tenant,
+    );
     return { data };
   }
 }

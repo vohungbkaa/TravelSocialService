@@ -40,6 +40,35 @@ export class NewsService {
     });
   }
 
+  async findOne(id: string, tenant: TenantContext) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            profile: true,
+          },
+        },
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        attachments: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        reactions: true,
+      },
+    });
+
+    if (!post || post.tenantId !== tenant.id) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return post;
+  }
+
   async create(
     dto: CreateNewsDto,
     user: { userId: string },
