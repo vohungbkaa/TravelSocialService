@@ -129,6 +129,41 @@ export class TenantsService {
     return Boolean(membership?.active);
   }
 
+  async getTenantUsers(tenant: TenantContext) {
+    const tenantUsers = await this.prisma.tenantUser.findMany({
+      where: {
+        tenantId: tenant.id,
+        active: true,
+        user: {
+          status: 'ACTIVE',
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true,
+                avatarMediaId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return tenantUsers.map((tu) => ({
+      id: tu.user.id,
+      username: tu.user.username,
+      email: tu.user.email,
+      displayName: tu.user.profile?.displayName || tu.user.username,
+      avatarMediaId: tu.user.profile?.avatarMediaId || null,
+    }));
+  }
+
   private getCodeOverride(value?: unknown, userRole?: string): string | undefined {
     const enabled =
       this.configService.get<string>('app.nodeEnv') !== 'production' ||

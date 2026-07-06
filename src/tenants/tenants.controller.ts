@@ -20,6 +20,14 @@ export class TenantsController {
     return { data };
   }
 
+  @Get('users')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get list of active users in the current tenant' })
+  async getTenantUsers(@CurrentTenant() tenant: TenantContext) {
+    const data = await this.tenantsService.getTenantUsers(tenant);
+    return { data };
+  }
+
   @Get('admin/list')
   @ApiBearerAuth()
   @Roles(UserRole.SUPER_ADMIN)
