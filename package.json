@@ -27,6 +27,7 @@
     "tenant:seed:base": "ts-node src/scripts/tenant-seed-base.ts",
     "tenant:seed:admins": "ts-node src/scripts/tenant-seed-admins.ts",
     "tenant:seed:categories": "ts-node src/scripts/tenant-seed-categories.ts",
+    "tenant:seed:shop": "ts-node src/scripts/tenant-seed-shop.ts",
     "tenant:seed:places": "ts-node src/scripts/tenant-seed-places.ts",
     "tenant:seed:all": "ts-node src/scripts/tenant-seed-all.ts",
     "tenant:delete": "ts-node src/scripts/tenant-delete.ts",

@@ -57,12 +57,15 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     TenantUser[]
-  features  TenantFeature[]
-  areas     Area[]
-  mapLayers TenantMapLayer[]
-  places    Place[]
-  posts     Post[]
+  users          TenantUser[]
+  features       TenantFeature[]
+  areas          Area[]
+  mapLayers      TenantMapLayer[]
+  places         Place[]
+  posts          Post[]
+  newsCategories NewsCategory[]
+  shopCategories ShopCategory[]
+  shopProducts   ShopProduct[]
 }
 
 model TenantUser {
@@ -74,8 +77,8 @@ model TenantUser {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, userId])
   @@index([userId, active])
@@ -91,64 +94,65 @@ model TenantFeature {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, feature])
   @@index([feature])
 }
 
 model User {
-  id           String       @id @default(uuid())
-  email        String?      @unique
-  phone        String?      @unique
-  username     String       @unique
-  passwordHash String?
-  status       UserStatus   @default(ACTIVE)
-  role         UserRole     @default(USER)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  deletedAt    DateTime?
-  profile      UserProfile?
+  id            String         @id @default(uuid())
+  email         String?        @unique
+  phone         String?        @unique
+  username      String         @unique
+  passwordHash  String?
+  status        UserStatus     @default(ACTIVE)
+  role          UserRole       @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  profile       UserProfile?
   refreshTokens RefreshToken[]
-  places       Place[]
-  tenants      TenantUser[]
-  posts        Post[]
+  places        Place[]
+  tenants       TenantUser[]
+  posts         Post[]
   postComments  PostComment[]
   postReactions PostReaction[]
   commentLikes  CommentLike[]
   postShares    PostShare[]
+  shopProducts  ShopProduct[]
 }
 
 model UserProfile {
-  userId          String   @id
-  displayName     String
-  bio             String?
-  avatarMediaId   String?
-  coverMediaId    String?
-  homeProvinceId  String?
-  websiteUrl      String?
-  postCount       Int      @default(0)
-  followerCount   Int      @default(0)
-  followingCount  Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String   @id
+  displayName    String
+  bio            String?
+  avatarMediaId  String?
+  coverMediaId   String?
+  homeProvinceId String?
+  websiteUrl     String?
+  postCount      Int      @default(0)
+  followerCount  Int      @default(0)
+  followingCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
-  id         String    @id @default(uuid())
-  userId     String
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tokenHash])
 }
 
 model Area {
-  id              String   @id @default(uuid())
+  id              String           @id @default(uuid())
   tenantId        String
   name            String
   slug            String
@@ -157,11 +161,11 @@ model Area {
   coverUrl        String?
   centerLat       Decimal
   centerLng       Decimal
-  defaultRadiusKm Decimal  @default(3)
-  published       Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultRadiusKm Decimal          @default(3)
+  published       Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   places          Place[]
   mapLayers       TenantMapLayer[]
 
@@ -188,8 +192,8 @@ model TenantMapLayer {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  area       Area?        @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  area   Area?  @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, key])
   @@index([tenantId, enabled, sortOrder])
@@ -197,36 +201,36 @@ model TenantMapLayer {
 }
 
 model PlaceCategory {
-  id          Int      @id @default(autoincrement())
-  code        String?  @unique
-  name        String
-  description String?
-  icon        String?
-  iconUrl     String?
-  markerColor String?
+  id           Int         @id @default(autoincrement())
+  code         String?     @unique
+  name         String
+  description  String?
+  icon         String?
+  iconUrl      String?
+  markerColor  String?
   markerIconId Int?
   markerIcon   MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  places      Place[]
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  places       Place[]
 }
 
 model MarkerIcon {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique
+  id          Int             @id @default(autoincrement())
+  key         String          @unique
   name        String
   iconUrl     String
   markerColor String
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   categories  PlaceCategory[]
   places      Place[]
 }
 
 model Place {
-  id                          String      @id @default(uuid())
+  id                          String        @id @default(uuid())
   tenantId                    String
   areaId                      String?
   name                        String
@@ -244,9 +248,9 @@ model Place {
   wardCode                    String?
   latitude                    Decimal?
   longitude                   Decimal?
-  ratingAvg                   Decimal     @default(0)
-  ratingCount                 Int         @default(0)
-  postCount                   Int         @default(0)
+  ratingAvg                   Decimal       @default(0)
+  ratingCount                 Int           @default(0)
+  postCount                   Int           @default(0)
   priceLevel                  PriceLevel?
   estimatedMinCost            Int?
   estimatedMaxCost            Int?
@@ -255,16 +259,16 @@ model Place {
   coverUrl                    String?
   videoUrl                    String?
   audioUrl                    String?
-  sortOrder                   Int         @default(0)
-  status                      PlaceStatus @default(DRAFT)
+  sortOrder                   Int           @default(0)
+  status                      PlaceStatus   @default(DRAFT)
   createdBy                   String?
-  createdAt                   DateTime    @default(now())
-  updatedAt                   DateTime    @updatedAt
-  area                        Area?       @relation(fields: [areaId], references: [id], onDelete: SetNull)
-  tenant                      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+  area                        Area?         @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  tenant                      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category                    PlaceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  markerIcon                  MarkerIcon? @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
-  creator                     User?       @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  markerIcon                  MarkerIcon?   @relation(fields: [markerIconId], references: [id], onDelete: SetNull)
+  creator                     User?         @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   images                      PlaceImage[]
 
   @@unique([tenantId, slug])
@@ -288,24 +292,24 @@ model PlaceImage {
 }
 
 model Post {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   tenantId      String
   authorId      String
   content       String
   category      String?
-  likesCount    Int           @default(0)
-  commentsCount Int           @default(0)
-  sharesCount   Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  likesCount    Int      @default(0)
+  commentsCount Int      @default(0)
+  sharesCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  images        PostImage[]
-  attachments   PostAttachment[]
-  comments      PostComment[]
-  reactions     PostReaction[]
-  shares        PostShare[]
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images      PostImage[]
+  attachments PostAttachment[]
+  comments    PostComment[]
+  reactions   PostReaction[]
+  shares      PostShare[]
 
   @@index([tenantId, createdAt])
   @@index([authorId])
@@ -318,7 +322,7 @@ model PostImage {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 enum PostAttachmentType {
@@ -339,24 +343,24 @@ model PostAttachment {
   sortOrder Int                @default(0)
   createdAt DateTime           @default(now())
 
-  post      Post               @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId, sortOrder])
 }
 
 model PostComment {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   postId    String
   authorId  String
   content   String
   mediaUrl  String?
   mediaType String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes     CommentLike[]
+  post   Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes  CommentLike[]
 }
 
 model PostReaction {
@@ -365,8 +369,8 @@ model PostReaction {
   type      String   @default("LIKE")
   createdAt DateTime @default(now())
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([postId, userId])
 }
@@ -376,8 +380,8 @@ model CommentLike {
   userId    String
   createdAt DateTime @default(now())
 
-  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([commentId, userId])
 }
@@ -388,9 +392,83 @@ model PostShare {
   userId    String?
   createdAt DateTime @default(now())
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([userId])
+}
+
+model NewsCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active, sortOrder])
+}
+
+model ShopCategory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products ShopProduct[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active, sortOrder])
+}
+
+model ShopProduct {
+  id          String   @id @default(uuid())
+  tenantId    String
+  categoryId  String
+  createdBy   String?
+  name        String
+  price       String
+  origin      String?
+  rating      Decimal  @default(5.0)
+  description String
+  imageUrl    String?
+  isOcop      Boolean  @default(true)
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category ShopCategory       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  creator  User?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  images   ShopProductImage[]
+
+  @@index([tenantId, active, createdAt])
+  @@index([tenantId, categoryId, active])
+  @@index([categoryId])
+  @@index([createdBy])
+}
+
+model ShopProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  imageUrl  String
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
 }

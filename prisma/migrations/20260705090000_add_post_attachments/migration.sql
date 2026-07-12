@@ -14,22 +14,27 @@ CREATE TABLE "PostAttachment" (
     CONSTRAINT "PostAttachment_pkey" PRIMARY KEY ("id")
 );
 
-INSERT INTO "PostAttachment" (
-    "id",
-    "postId",
-    "type",
-    "url",
-    "sortOrder",
-    "createdAt"
-)
-SELECT
-    "id",
-    "postId",
-    'IMAGE'::"PostAttachmentType",
-    "imageUrl",
-    "sortOrder",
-    "createdAt"
-FROM "PostImage";
+DO $$
+BEGIN
+    IF to_regclass('"PostImage"') IS NOT NULL THEN
+        INSERT INTO "PostAttachment" (
+            "id",
+            "postId",
+            "type",
+            "url",
+            "sortOrder",
+            "createdAt"
+        )
+        SELECT
+            "id",
+            "postId",
+            'IMAGE'::"PostAttachmentType",
+            "imageUrl",
+            "sortOrder",
+            "createdAt"
+        FROM "PostImage";
+    END IF;
+END $$;
 
 CREATE INDEX "PostAttachment_postId_sortOrder_idx" ON "PostAttachment"("postId", "sortOrder");
 

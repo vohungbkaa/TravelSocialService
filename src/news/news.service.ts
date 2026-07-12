@@ -20,9 +20,41 @@ export class NewsService {
     private jwtService: JwtService,
   ) {}
 
-  async findAll(tenant: TenantContext) {
+  async getCategories(tenant: TenantContext) {
+    return this.prisma.newsCategory.findMany({
+      where: { tenantId: tenant.id, active: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  async createCategory(
+    dto: { name: string; description?: string; sortOrder?: number },
+    tenant: TenantContext,
+  ) {
+    return this.prisma.newsCategory.create({
+      data: {
+        tenantId: tenant.id,
+        name: dto.name,
+        description: dto.description,
+        sortOrder: dto.sortOrder ?? 0,
+      },
+    });
+  }
+
+  async findAll(tenant: TenantContext, category?: string) {
+    const where: any = { tenantId: tenant.id };
+    if (category && category !== 'Tất cả') {
+      if (category === 'Tin tức') {
+        where.OR = [
+          { category: 'Tin tức' },
+          { category: null },
+        ];
+      } else {
+        where.category = category;
+      }
+    }
     return this.prisma.post.findMany({
-      where: { tenantId: tenant.id },
+      where,
       include: {
         author: {
           select: {

@@ -7,6 +7,7 @@ import {
   Body,
   Patch,
   Headers,
+  Query,
 } from '@nestjs/common';
 import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
@@ -21,11 +22,32 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
+  @Get('categories')
+  @Public()
+  @ApiOperation({ summary: 'Get all news categories' })
+  async getCategories(@CurrentTenant() tenant: TenantContext) {
+    const data = await this.newsService.getCategories(tenant);
+    return { data };
+  }
+
+  @Post('categories')
+  @ApiOperation({ summary: 'Create a new news category' })
+  async createCategory(
+    @Body() dto: { name: string; description?: string; sortOrder?: number },
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    const data = await this.newsService.createCategory(dto, tenant);
+    return { data };
+  }
+
   @Get()
   @Public()
   @ApiOperation({ summary: 'List all news posts for the current tenant' })
-  async findAll(@CurrentTenant() tenant: TenantContext) {
-    const data = await this.newsService.findAll(tenant);
+  async findAll(
+    @CurrentTenant() tenant: TenantContext,
+    @Query('category') category?: string,
+  ) {
+    const data = await this.newsService.findAll(tenant, category);
     return { data };
   }
 
