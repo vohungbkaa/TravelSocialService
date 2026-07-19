@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, HttpStatus } from '@nestjs/common';
+import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
@@ -8,6 +9,8 @@ import { UserStatus, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { GoogleTokenVerifier } from './../src/auth/google-token-verifier.service';
 import { FacebookTokenVerifier } from './../src/auth/facebook-token-verifier.service';
+import { HttpExceptionFilter } from './../src/common/filters/http-exception.filter';
+import { assertTestDatabase } from './assert-test-database';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
@@ -25,15 +28,12 @@ describe('AuthController (e2e)', () => {
       .useValue(facebookTokenVerifier)
       .compile();
 
+    const configService = moduleFixture.get(ConfigService);
+    assertTestDatabase(configService.getOrThrow<string>('DATABASE_URL'));
+
     app = moduleFixture.createNestApplication();
 
     // Register pipes and filters
-    const { ValidationPipe } = require('@nestjs/common');
-    const {
-      HttpExceptionFilter,
-    } = require('./../src/common/filters/http-exception.filter');
-    const { ConfigService } = require('@nestjs/config');
-
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -41,7 +41,7 @@ describe('AuthController (e2e)', () => {
         transform: true,
       }),
     );
-    app.useGlobalFilters(new HttpExceptionFilter(app.get(ConfigService)));
+    app.useGlobalFilters(new HttpExceptionFilter(configService));
     app.setGlobalPrefix('api/v1');
 
     await app.init();

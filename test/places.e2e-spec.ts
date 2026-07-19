@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, HttpStatus } from '@nestjs/common';
+import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
 import { UserStatus, UserRole, PlaceStatus, PriceLevel } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { HttpExceptionFilter } from './../src/common/filters/http-exception.filter';
+import { assertTestDatabase } from './assert-test-database';
 
 describe('Places & Areas (e2e)', () => {
   let app: INestApplication<App>;
@@ -20,11 +23,10 @@ describe('Places & Areas (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    const configService = moduleFixture.get(ConfigService);
+    assertTestDatabase(configService.getOrThrow<string>('DATABASE_URL'));
 
-    const { ValidationPipe } = require('@nestjs/common');
-    const { HttpExceptionFilter } = require('./../src/common/filters/http-exception.filter');
-    const { ConfigService } = require('@nestjs/config');
+    app = moduleFixture.createNestApplication();
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -33,7 +35,7 @@ describe('Places & Areas (e2e)', () => {
         transform: true,
       }),
     );
-    app.useGlobalFilters(new HttpExceptionFilter(app.get(ConfigService)));
+    app.useGlobalFilters(new HttpExceptionFilter(configService));
     app.setGlobalPrefix('api/v1');
 
     await app.init();
@@ -424,4 +426,3 @@ describe('Places & Areas (e2e)', () => {
     });
   });
 });
-
