@@ -35,7 +35,7 @@ export class GoogleTokenVerifier {
 
       return {
         providerUserId: payload.sub,
-        displayName: payload.name?.trim() || payload.email || 'Google User',
+        fullName: payload.name?.trim() || payload.email || 'Google User',
         ...(payload.email && { email: payload.email.toLowerCase() }),
         ...(payload.picture && { avatarUrl: payload.picture }),
       };

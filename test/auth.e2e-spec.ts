@@ -68,8 +68,8 @@ describe('AuthController (e2e)', () => {
       displayName: 'Test User',
     };
 
-    it('should register a new user successfully', () => {
-      return request(app.getHttpServer())
+    it('should register a new user in the current tenant', async () => {
+      const response = await request(app.getHttpServer())
         .post('/api/v1/auth/register')
         .send(validUser)
         .expect(HttpStatus.CREATED)
@@ -82,6 +82,13 @@ describe('AuthController (e2e)', () => {
           expect(res.body.data.status).toBe(UserStatus.ACTIVE);
           expect(res.body.data).not.toHaveProperty('passwordHash');
         });
+
+      const membership = await prisma.tenantUser.findFirst({
+        where: { userId: response.body.data.id },
+        include: { tenant: true },
+      });
+      expect(membership?.tenant.code).toBe('tien-thang');
+      expect(membership?.role).toBe('VIEWER');
     });
 
     it('should throw ConflictException on duplicate email', async () => {
@@ -137,7 +144,7 @@ describe('AuthController (e2e)', () => {
           role: UserRole.USER,
           profile: {
             create: {
-              displayName: 'Login User',
+              fullName: 'Login User',
             },
           },
         },
@@ -217,7 +224,7 @@ describe('AuthController (e2e)', () => {
     it('should create and reuse a user authenticated by Google', async () => {
       googleTokenVerifier.verify.mockResolvedValue({
         providerUserId: 'google-user-id',
-        displayName: 'Google User',
+        fullName: 'Google User',
         email: 'google@example.com',
         avatarUrl: 'https://example.com/google-avatar.jpg',
       });
@@ -235,13 +242,57 @@ describe('AuthController (e2e)', () => {
       expect(secondResponse.body.data.user.id).toBe(
         firstResponse.body.data.user.id,
       );
+      expect(firstResponse.body.data.user.username).toBe('google@example.com');
+      expect(firstResponse.body.data.user.fullName).toBe('Google User');
+      expect(firstResponse.body.data.user.displayName).toBe('Google User');
       expect(await prisma.socialAuthIdentity.count()).toBe(1);
+      const membership = await prisma.tenantUser.findFirst({
+        where: { userId: firstResponse.body.data.user.id },
+        include: { tenant: true },
+      });
+      expect(membership?.tenant.code).toBe('tien-thang');
+      expect(membership?.role).toBe('VIEWER');
+
+      const tenantUsersResponse = await request(app.getHttpServer())
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${firstResponse.body.data.accessToken}`)
+        .expect(HttpStatus.OK);
+      expect(tenantUsersResponse.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: firstResponse.body.data.user.id,
+            fullName: 'Google User',
+          }),
+        ]),
+      );
+    });
+
+    it('should add a suffix when a social username already exists', async () => {
+      await prisma.user.create({
+        data: {
+          username: 'another-google@example.com',
+          email: 'existing-google-name@example.com',
+          profile: { create: { fullName: 'Existing User' } },
+        },
+      });
+      googleTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'another-google-user-id',
+        fullName: 'Google User',
+        email: 'another-google@example.com',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ token: 'valid-google-id-token' })
+        .expect(HttpStatus.OK);
+
+      expect(response.body.data.user.username).toMatch(/^google_[0-9a-f]+$/);
     });
 
     it('should create a Facebook user when email is unavailable', async () => {
       facebookTokenVerifier.verify.mockResolvedValue({
         providerUserId: 'facebook-user-id',
-        displayName: 'Facebook User',
+        fullName: 'Facebook User',
       });
 
       const response = await request(app.getHttpServer())
@@ -254,12 +305,18 @@ describe('AuthController (e2e)', () => {
         where: { id: response.body.data.user.id },
       });
       expect(user?.email).toBeNull();
+      const membership = await prisma.tenantUser.findFirst({
+        where: { userId: response.body.data.user.id },
+        include: { tenant: true },
+      });
+      expect(membership?.tenant.code).toBe('tien-thang');
+      expect(membership?.role).toBe('VIEWER');
     });
 
     it('should rotate a refresh token issued by Google login', async () => {
       googleTokenVerifier.verify.mockResolvedValue({
         providerUserId: 'google-refresh-user-id',
-        displayName: 'Google Refresh User',
+        fullName: 'Google Refresh User',
         email: 'google-refresh@example.com',
       });
 
@@ -294,7 +351,7 @@ describe('AuthController (e2e)', () => {
     it('should rotate a refresh token issued by Facebook login', async () => {
       facebookTokenVerifier.verify.mockResolvedValue({
         providerUserId: 'facebook-refresh-user-id',
-        displayName: 'Facebook Refresh User',
+        fullName: 'Facebook Refresh User',
       });
 
       const loginResponse = await request(app.getHttpServer())
@@ -342,7 +399,7 @@ describe('AuthController (e2e)', () => {
           role: UserRole.USER,
           profile: {
             create: {
-              displayName: 'Refresh User',
+              fullName: 'Refresh User',
             },
           },
         },

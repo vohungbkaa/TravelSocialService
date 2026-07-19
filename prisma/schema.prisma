@@ -106,27 +106,27 @@ model TenantFeature {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String?        @unique
-  phone         String?        @unique
-  username      String         @unique
-  passwordHash  String?
-  status        UserStatus     @default(ACTIVE)
-  role          UserRole       @default(USER)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
-  profile       UserProfile?
-  refreshTokens RefreshToken[]
+  id                   String               @id @default(uuid())
+  email                String?              @unique
+  phone                String?              @unique
+  username             String               @unique
+  passwordHash         String?
+  status               UserStatus           @default(ACTIVE)
+  role                 UserRole             @default(USER)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?
+  profile              UserProfile?
+  refreshTokens        RefreshToken[]
   socialAuthIdentities SocialAuthIdentity[]
-  places        Place[]
-  tenants       TenantUser[]
-  posts         Post[]
-  postComments  PostComment[]
-  postReactions PostReaction[]
-  commentLikes  CommentLike[]
-  postShares    PostShare[]
-  shopProducts  ShopProduct[]
+  places               Place[]
+  tenants              TenantUser[]
+  posts                Post[]
+  postComments         PostComment[]
+  postReactions        PostReaction[]
+  commentLikes         CommentLike[]
+  postShares           PostShare[]
+  shopProducts         ShopProduct[]
 }
 
 model SocialAuthIdentity {
@@ -144,7 +144,7 @@ model SocialAuthIdentity {
 
 model UserProfile {
   userId         String   @id
-  displayName    String
+  fullName       String
   bio            String?
   avatarMediaId  String?
   coverMediaId   String?

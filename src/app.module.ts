@@ -16,6 +16,7 @@ import { ShopModule } from './shop/shop.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     UploadModule,
     NewsModule,
     ShopModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

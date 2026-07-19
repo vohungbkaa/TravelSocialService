@@ -17,6 +17,7 @@ import {
   Prisma,
   SocialAuthProvider,
   TenantUser,
+  TenantUserRole,
   UserProfile,
   UserStatus,
   UserRole,
@@ -24,6 +25,7 @@ import {
 import { GoogleTokenVerifier } from './google-token-verifier.service';
 import { FacebookTokenVerifier } from './facebook-token-verifier.service';
 import { SocialAuthProfile } from './social-auth-profile';
+import type { TenantContext } from '../tenants/tenant-context.type';
 
 const authUserInclude = {
   profile: true,
@@ -42,7 +44,7 @@ export class AuthService {
     private readonly facebookTokenVerifier: FacebookTokenVerifier,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto, tenant?: TenantContext) {
     const email = dto.email.toLowerCase();
     const username = dto.username.toLowerCase();
     const phone = dto.phone ? this.normalizePhone(dto.phone) : undefined;
@@ -90,9 +92,19 @@ export class AuthService {
       await tx.userProfile.create({
         data: {
           userId: newUser.id,
-          displayName: dto.displayName,
+          fullName: dto.displayName,
         },
       });
+
+      if (tenant) {
+        await tx.tenantUser.create({
+          data: {
+            tenantId: tenant.id,
+            userId: newUser.id,
+            role: TenantUserRole.VIEWER,
+          },
+        });
+      }
 
       return newUser;
     });
@@ -102,13 +114,14 @@ export class AuthService {
       email: user.email,
       phone: user.phone,
       username: user.username,
+      fullName: dto.displayName,
       displayName: dto.displayName,
       role: user.role,
       status: user.status,
     };
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, tenant?: TenantContext) {
     const identifier = dto.identifier.trim().toLowerCase();
     const phone = this.looksLikePhone(identifier)
       ? this.normalizePhone(identifier)
@@ -140,17 +153,26 @@ export class AuthService {
       throw new UnauthorizedException('INVALID_CREDENTIALS');
     }
 
-    return this.createAuthSession(user);
+    const tenantUser = await this.ensureTenantMembership(user, tenant);
+    return this.createAuthSession(tenantUser);
   }
 
-  async loginWithGoogle(idToken: string) {
+  async loginWithGoogle(idToken: string, tenant?: TenantContext) {
     const profile = await this.googleTokenVerifier.verify(idToken);
-    return this.loginWithSocialProfile(SocialAuthProvider.GOOGLE, profile);
+    return this.loginWithSocialProfile(
+      SocialAuthProvider.GOOGLE,
+      profile,
+      tenant,
+    );
   }
 
-  async loginWithFacebook(accessToken: string) {
+  async loginWithFacebook(accessToken: string, tenant?: TenantContext) {
     const profile = await this.facebookTokenVerifier.verify(accessToken);
-    return this.loginWithSocialProfile(SocialAuthProvider.FACEBOOK, profile);
+    return this.loginWithSocialProfile(
+      SocialAuthProvider.FACEBOOK,
+      profile,
+      tenant,
+    );
   }
 
   async refresh(dto: RefreshTokenDto) {
@@ -246,6 +268,7 @@ export class AuthService {
   private async loginWithSocialProfile(
     provider: SocialAuthProvider,
     profile: SocialAuthProfile,
+    tenant?: TenantContext,
   ) {
     const identity = await this.prisma.socialAuthIdentity.findUnique({
       where: {
@@ -263,7 +286,9 @@ export class AuthService {
 
     if (identity) {
       this.assertUserCanLogin(identity.user);
-      return this.createAuthSession(identity.user);
+      const user = await this.syncSocialUser(identity.user, provider, profile);
+      const tenantUser = await this.ensureTenantMembership(user, tenant);
+      return this.createAuthSession(tenantUser);
     }
 
     const email = profile.email?.trim().toLowerCase();
@@ -290,6 +315,7 @@ export class AuthService {
         tx,
         provider,
         profile.providerUserId,
+        email,
       );
       const user = await tx.user.create({
         data: {
@@ -299,7 +325,7 @@ export class AuthService {
           role: UserRole.USER,
           profile: {
             create: {
-              displayName: profile.displayName,
+              fullName: profile.fullName,
               avatarMediaId: profile.avatarUrl,
             },
           },
@@ -319,14 +345,53 @@ export class AuthService {
       include: authUserInclude,
     });
     this.assertUserCanLogin(user);
-    return this.createAuthSession(user);
+    const syncedUser = await this.syncSocialUser(user, provider, profile);
+    const tenantUser = await this.ensureTenantMembership(syncedUser, tenant);
+    return this.createAuthSession(tenantUser);
+  }
+
+  private async ensureTenantMembership(
+    user: AuthUser,
+    tenant?: TenantContext,
+  ): Promise<AuthUser> {
+    if (!tenant) return user;
+
+    await this.prisma.tenantUser.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: tenant.id,
+          userId: user.id,
+        },
+      },
+      update: { active: true },
+      create: {
+        tenantId: tenant.id,
+        userId: user.id,
+        role: TenantUserRole.VIEWER,
+      },
+    });
+
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      include: authUserInclude,
+    });
   }
 
   private async createSocialUsername(
     tx: Prisma.TransactionClient,
     provider: SocialAuthProvider,
     providerUserId: string,
+    email?: string,
+    excludeUserId?: string,
   ): Promise<string> {
+    if (email) {
+      const username = email.trim().toLowerCase();
+      const existing = await tx.user.findUnique({ where: { username } });
+      if (!existing || existing.id === excludeUserId) {
+        return username;
+      }
+    }
+
     const providerName = provider.toLowerCase();
     const digest = crypto
       .createHash('sha256')
@@ -336,12 +401,52 @@ export class AuthService {
     for (let length = 12; length <= digest.length; length += 4) {
       const username = `${providerName}_${digest.slice(0, length)}`;
       const existing = await tx.user.findUnique({ where: { username } });
-      if (!existing) {
+      if (!existing || existing.id === excludeUserId) {
         return username;
       }
     }
 
     return `${providerName}_${crypto.randomUUID().replaceAll('-', '')}`;
+  }
+
+  private async syncSocialUser(
+    user: AuthUser,
+    provider: SocialAuthProvider,
+    profile: SocialAuthProfile,
+  ): Promise<AuthUser> {
+    return this.prisma.$transaction(async (tx) => {
+      const username = await this.createSocialUsername(
+        tx,
+        provider,
+        profile.providerUserId,
+        profile.email,
+        user.id,
+      );
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          username,
+          profile: {
+            upsert: {
+              create: {
+                fullName: profile.fullName,
+                avatarMediaId: profile.avatarUrl,
+              },
+              update: {
+                fullName: profile.fullName,
+                ...(profile.avatarUrl && { avatarMediaId: profile.avatarUrl }),
+              },
+            },
+          },
+        },
+      });
+
+      return tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: authUserInclude,
+      });
+    });
   }
 
   private assertUserCanLogin(user: Pick<AuthUser, 'status'>): void {
@@ -369,7 +474,8 @@ export class AuthService {
       user: {
         id: user.id,
         username: user.username,
-        displayName: user.profile?.displayName || user.username,
+        fullName: user.profile?.fullName || user.username,
+        displayName: user.profile?.fullName || user.username,
         role: user.role,
       },
     };
@@ -394,20 +500,21 @@ export class AuthService {
     username: string,
     role: UserRole,
     tenants: Array<Pick<TenantUser, 'tenantId' | 'role'>> = [],
-    profile: Pick<UserProfile, 'displayName' | 'avatarMediaId'> | null = null,
+    profile: Pick<UserProfile, 'fullName' | 'avatarMediaId'> | null = null,
   ): string {
     const tenantRoles = tenants.map((t) => ({
       tenantId: t.tenantId,
       role: t.role,
     }));
-    const displayName = profile?.displayName || username;
+    const fullName = profile?.fullName || username;
     const avatar = profile?.avatarMediaId || null;
     const payload = {
       sub: userId,
       username,
       role,
       tenantRoles,
-      displayName,
+      fullName,
+      displayName: fullName,
       avatar,
     };
     return this.jwtService.sign(payload);

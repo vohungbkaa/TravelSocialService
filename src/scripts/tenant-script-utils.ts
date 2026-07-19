@@ -1,4 +1,10 @@
-import { Prisma, PrismaClient, TenantUserRole, UserRole, UserStatus } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  TenantUserRole,
+  UserRole,
+  UserStatus,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -53,11 +59,20 @@ export function getOptionalEnv(name: string): string | undefined {
 }
 
 export function readSeedGeoJson(fileName: string): Prisma.InputJsonValue {
-  const filePath = path.join(process.cwd(), 'src', 'scripts', 'seed-data', fileName);
+  const filePath = path.join(
+    process.cwd(),
+    'src',
+    'scripts',
+    'seed-data',
+    fileName,
+  );
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Prisma.InputJsonValue;
 }
 
-export async function upsertTenantBundle(prisma: PrismaClient, input: TenantSeedInput) {
+export async function upsertTenantBundle(
+  prisma: PrismaClient,
+  input: TenantSeedInput,
+) {
   const tenant = await prisma.tenant.upsert({
     where: { code: input.code },
     update: {
@@ -77,7 +92,9 @@ export async function upsertTenantBundle(prisma: PrismaClient, input: TenantSeed
     },
   });
 
-  const featureConfig = input.features || Object.fromEntries(DEFAULT_FEATURES.map((feature) => [feature, true]));
+  const featureConfig =
+    input.features ||
+    Object.fromEntries(DEFAULT_FEATURES.map((feature) => [feature, true]));
   for (const [feature, enabled] of Object.entries(featureConfig)) {
     await prisma.tenantFeature.upsert({
       where: {
@@ -136,12 +153,16 @@ export async function upsertTenantBundle(prisma: PrismaClient, input: TenantSeed
         areaId: area.id,
         name: input.mapLayer.name,
         enabled: true,
-        geoJson: input.mapLayer.geoJsonFile ? readSeedGeoJson(input.mapLayer.geoJsonFile) : undefined,
+        geoJson: input.mapLayer.geoJsonFile
+          ? readSeedGeoJson(input.mapLayer.geoJsonFile)
+          : undefined,
         style: input.mapLayer.style ?? Prisma.JsonNull,
         bounds: input.mapLayer.bounds as Prisma.InputJsonValue | undefined,
         centerLat: new Prisma.Decimal(input.area.centerLat),
         centerLng: new Prisma.Decimal(input.area.centerLng),
-        zoom: input.mapLayer.zoom ? new Prisma.Decimal(input.mapLayer.zoom) : undefined,
+        zoom: input.mapLayer.zoom
+          ? new Prisma.Decimal(input.mapLayer.zoom)
+          : undefined,
       },
       create: {
         tenantId: tenant.id,
@@ -150,12 +171,16 @@ export async function upsertTenantBundle(prisma: PrismaClient, input: TenantSeed
         name: input.mapLayer.name,
         type: 'BOUNDARY',
         enabled: true,
-        geoJson: input.mapLayer.geoJsonFile ? readSeedGeoJson(input.mapLayer.geoJsonFile) : Prisma.JsonNull,
+        geoJson: input.mapLayer.geoJsonFile
+          ? readSeedGeoJson(input.mapLayer.geoJsonFile)
+          : Prisma.JsonNull,
         style: input.mapLayer.style ?? Prisma.JsonNull,
         bounds: input.mapLayer.bounds as Prisma.InputJsonValue | undefined,
         centerLat: new Prisma.Decimal(input.area.centerLat),
         centerLng: new Prisma.Decimal(input.area.centerLng),
-        zoom: input.mapLayer.zoom ? new Prisma.Decimal(input.mapLayer.zoom) : undefined,
+        zoom: input.mapLayer.zoom
+          ? new Prisma.Decimal(input.mapLayer.zoom)
+          : undefined,
       },
     });
   }
@@ -163,14 +188,17 @@ export async function upsertTenantBundle(prisma: PrismaClient, input: TenantSeed
   return { tenant, area };
 }
 
-export async function upsertTenantAdmin(prisma: PrismaClient, input: {
-  tenantCode: string;
-  email: string;
-  username: string;
-  password?: string;
-  displayName: string;
-  tenantRole: TenantUserRole;
-}) {
+export async function upsertTenantAdmin(
+  prisma: PrismaClient,
+  input: {
+    tenantCode: string;
+    email: string;
+    username: string;
+    password?: string;
+    displayName: string;
+    tenantRole: TenantUserRole;
+  },
+) {
   const tenant = await prisma.tenant.findUnique({
     where: { code: input.tenantCode },
   });
@@ -182,20 +210,22 @@ export async function upsertTenantAdmin(prisma: PrismaClient, input: {
   const normalizedUsername = input.username.toLowerCase();
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [
-        { email: normalizedEmail },
-        { username: normalizedUsername },
-      ],
+      OR: [{ email: normalizedEmail }, { username: normalizedUsername }],
     },
   });
 
-  const passwordHash = input.password ? await bcrypt.hash(input.password, 10) : undefined;
+  const passwordHash = input.password
+    ? await bcrypt.hash(input.password, 10)
+    : undefined;
 
   const user = existingUser
     ? await prisma.user.update({
         where: { id: existingUser.id },
         data: {
-          role: existingUser.role === UserRole.SUPER_ADMIN ? UserRole.SUPER_ADMIN : UserRole.ADMIN,
+          role:
+            existingUser.role === UserRole.SUPER_ADMIN
+              ? UserRole.SUPER_ADMIN
+              : UserRole.ADMIN,
           status: UserStatus.ACTIVE,
           passwordHash: passwordHash || existingUser.passwordHash,
         },
@@ -209,7 +239,7 @@ export async function upsertTenantAdmin(prisma: PrismaClient, input: {
           status: UserStatus.ACTIVE,
           profile: {
             create: {
-              displayName: input.displayName,
+              fullName: input.displayName,
             },
           },
         },
@@ -217,10 +247,10 @@ export async function upsertTenantAdmin(prisma: PrismaClient, input: {
 
   await prisma.userProfile.upsert({
     where: { userId: user.id },
-    update: { displayName: input.displayName },
+    update: { fullName: input.displayName },
     create: {
       userId: user.id,
-      displayName: input.displayName,
+      fullName: input.displayName,
     },
   });
 
@@ -246,4 +276,6 @@ export async function upsertTenantAdmin(prisma: PrismaClient, input: {
   return { tenant, user, membership };
 }
 
-export const LOCAL_TENANTS: TenantSeedInput[] = Object.values(TENANT_DATA).map((seed) => seed.tenant);
+export const LOCAL_TENANTS: TenantSeedInput[] = Object.values(TENANT_DATA).map(
+  (seed) => seed.tenant,
+);

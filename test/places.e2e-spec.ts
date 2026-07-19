@@ -61,7 +61,7 @@ describe('Places & Areas (e2e)', () => {
 
     // Create users & get tokens
     const passwordHash = await bcrypt.hash('Password123', 10);
-    
+
     // Admin
     await prisma.user.create({
       data: {
@@ -70,7 +70,7 @@ describe('Places & Areas (e2e)', () => {
         passwordHash,
         status: UserStatus.ACTIVE,
         role: UserRole.ADMIN,
-        profile: { create: { displayName: 'Admin User' } },
+        profile: { create: { fullName: 'Admin User' } },
       },
     });
 
@@ -82,7 +82,7 @@ describe('Places & Areas (e2e)', () => {
         passwordHash,
         status: UserStatus.ACTIVE,
         role: UserRole.USER,
-        profile: { create: { displayName: 'Regular User' } },
+        profile: { create: { fullName: 'Regular User' } },
       },
     });
 
@@ -215,7 +215,9 @@ describe('Places & Areas (e2e)', () => {
         .expect(HttpStatus.BAD_REQUEST)
         .expect((res) => {
           expect(res.body.error.code).toBe('VALIDATION_ERROR');
-          expect(res.body.error.message).toBe('PLACE_INCOMPLETE_FOR_PUBLISHING');
+          expect(res.body.error.message).toBe(
+            'PLACE_INCOMPLETE_FOR_PUBLISHING',
+          );
         });
     });
 

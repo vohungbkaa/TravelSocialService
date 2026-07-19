@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { TenantContext } from './tenant-context.type';
@@ -14,21 +18,28 @@ export class TenantsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async resolveFromRequest(request: Request & { user?: { role?: string } }): Promise<TenantContext | undefined> {
+  async resolveFromRequest(
+    request: Request & { user?: { role?: string } },
+  ): Promise<TenantContext | undefined> {
     const headers = request.headers;
-    
+
     // Attempt to extract role from auth token if not already parsed
     let role = request.user?.role;
     if (!role && headers.authorization?.startsWith('Bearer ')) {
       try {
         const token = headers.authorization.split(' ')[1];
-        const payloadStr = Buffer.from(token.split('.')[1], 'base64').toString();
+        const payloadStr = Buffer.from(
+          token.split('.')[1],
+          'base64',
+        ).toString();
         const payload = JSON.parse(payloadStr);
         role = payload.role;
       } catch (e) {}
     }
 
-    const codeOverride = this.getCodeOverride(headers['x-tenant-code'], role) || this.getCodeOverride(request.query?.tenant, role);
+    const codeOverride =
+      this.getCodeOverride(headers['x-tenant-code'], role) ||
+      this.getCodeOverride(request.query?.tenant, role);
     if (codeOverride) {
       return this.findEnabledTenantByCode(codeOverride);
     }
@@ -51,7 +62,8 @@ export class TenantsService {
     }
 
     const fallbackCode =
-      this.configService.get<string>('app.tenant.defaultCode') || DEFAULT_TENANT_CODE;
+      this.configService.get<string>('app.tenant.defaultCode') ||
+      DEFAULT_TENANT_CODE;
     return this.findEnabledTenantByCode(fallbackCode, false);
   }
 
@@ -61,7 +73,8 @@ export class TenantsService {
     }
 
     const fallbackCode =
-      this.configService.get<string>('app.tenant.defaultCode') || DEFAULT_TENANT_CODE;
+      this.configService.get<string>('app.tenant.defaultCode') ||
+      DEFAULT_TENANT_CODE;
     const resolved = await this.findEnabledTenantByCode(fallbackCode, false);
     if (!resolved) {
       throw new NotFoundException('TENANT_NOT_FOUND');
@@ -81,9 +94,12 @@ export class TenantsService {
     });
 
     const settings = (currentTenant.settings as Record<string, any>) || {};
-    const minZoom = settings.minZoom !== undefined ? Number(settings.minZoom) : 10;
-    const maxZoom = settings.maxZoom !== undefined ? Number(settings.maxZoom) : 18;
-    const defaultZoom = settings.zoom !== undefined ? Number(settings.zoom) : 13;
+    const minZoom =
+      settings.minZoom !== undefined ? Number(settings.minZoom) : 10;
+    const maxZoom =
+      settings.maxZoom !== undefined ? Number(settings.maxZoom) : 18;
+    const defaultZoom =
+      settings.zoom !== undefined ? Number(settings.zoom) : 13;
 
     return {
       code: currentTenant.code,
@@ -111,13 +127,16 @@ export class TenantsService {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
-          select: { areas: true, places: true, users: true }
-        }
-      }
+          select: { areas: true, places: true, users: true },
+        },
+      },
     });
   }
 
-  async canAdminAccessTenant(userId: string, tenantId: string): Promise<boolean> {
+  async canAdminAccessTenant(
+    userId: string,
+    tenantId: string,
+  ): Promise<boolean> {
     const membership = await this.prisma.tenantUser.findUnique({
       where: {
         tenantId_userId: {
@@ -129,45 +148,14 @@ export class TenantsService {
     return Boolean(membership?.active);
   }
 
-  async getTenantUsers(tenant: TenantContext) {
-    const tenantUsers = await this.prisma.tenantUser.findMany({
-      where: {
-        tenantId: tenant.id,
-        active: true,
-        user: {
-          status: 'ACTIVE',
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            profile: {
-              select: {
-                displayName: true,
-                avatarMediaId: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return tenantUsers.map((tu) => ({
-      id: tu.user.id,
-      username: tu.user.username,
-      email: tu.user.email,
-      displayName: tu.user.profile?.displayName || tu.user.username,
-      avatarMediaId: tu.user.profile?.avatarMediaId || null,
-    }));
-  }
-
-  private getCodeOverride(value?: unknown, userRole?: string): string | undefined {
+  private getCodeOverride(
+    value?: unknown,
+    userRole?: string,
+  ): string | undefined {
     const enabled =
       this.configService.get<string>('app.nodeEnv') !== 'production' ||
-      this.configService.get<boolean>('app.tenant.enableCodeOverride') === true ||
+      this.configService.get<boolean>('app.tenant.enableCodeOverride') ===
+        true ||
       userRole === 'SUPER_ADMIN';
 
     if (!enabled) {

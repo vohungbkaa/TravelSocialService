@@ -1,6 +1,10 @@
 import { PrismaClient, TenantUserRole } from '@prisma/client';
 import * as dotenv from 'dotenv';
-import { getEnv, getOptionalEnv, upsertTenantAdmin } from './tenant-script-utils';
+import {
+  getEnv,
+  getOptionalEnv,
+  upsertTenantAdmin,
+} from './tenant-script-utils';
 
 dotenv.config();
 
@@ -28,7 +32,9 @@ async function main() {
     include: { profile: true },
   });
   if (!existing) {
-    throw new Error('User not found. Use tenant:admin:create to create a new admin.');
+    throw new Error(
+      'User not found. Use tenant:admin:create to create a new admin.',
+    );
   }
 
   try {
@@ -36,11 +42,16 @@ async function main() {
       tenantCode: getEnv('TENANT_CODE').toLowerCase(),
       email: existing.email || email || `${existing.username}@example.local`,
       username: existing.username,
-      displayName: getOptionalEnv('ADMIN_DISPLAY_NAME') || existing.profile?.displayName || existing.username,
+      displayName:
+        getOptionalEnv('ADMIN_DISPLAY_NAME') ||
+        existing.profile?.fullName ||
+        existing.username,
       tenantRole: (process.env.TENANT_USER_ROLE || 'ADMIN') as TenantUserRole,
     });
 
-    console.log(`Tenant admin assigned: ${user.username} -> ${tenant.code} (${membership.role})`);
+    console.log(
+      `Tenant admin assigned: ${user.username} -> ${tenant.code} (${membership.role})`,
+    );
   } finally {
     await prisma.$disconnect();
   }

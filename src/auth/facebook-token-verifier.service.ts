@@ -75,7 +75,7 @@ export class FacebookTokenVerifier {
 
       return {
         providerUserId: profile.id,
-        displayName: profile.name?.trim() || 'Facebook User',
+        fullName: profile.name?.trim() || 'Facebook User',
         ...(profile.email && { email: profile.email.toLowerCase() }),
         ...(profile.picture?.data?.url && {
           avatarUrl: profile.picture.data.url,

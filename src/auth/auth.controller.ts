@@ -7,6 +7,8 @@ import { LogoutDto } from './dto/logout.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
+import type { TenantContext } from '../tenants/tenant-context.type';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -19,8 +21,11 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 409, description: 'Email or username already exists' })
-  async register(@Body() dto: RegisterDto) {
-    const data = await this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @CurrentTenant() tenant?: TenantContext,
+  ) {
+    const data = await this.authService.register(dto, tenant);
     return { data };
   }
 
@@ -31,8 +36,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User logged in, tokens returned' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 403, description: 'User suspended' })
-  async login(@Body() dto: LoginDto) {
-    const data = await this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @CurrentTenant() tenant?: TenantContext) {
+    const data = await this.authService.login(dto, tenant);
     return { data };
   }
 
@@ -42,8 +47,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Log in with a Google ID token' })
   @ApiResponse({ status: 200, description: 'User logged in, tokens returned' })
   @ApiResponse({ status: 401, description: 'Invalid Google ID token' })
-  async loginWithGoogle(@Body() dto: SocialLoginDto) {
-    const data = await this.authService.loginWithGoogle(dto.token);
+  async loginWithGoogle(
+    @Body() dto: SocialLoginDto,
+    @CurrentTenant() tenant?: TenantContext,
+  ) {
+    const data = await this.authService.loginWithGoogle(dto.token, tenant);
     return { data };
   }
 
@@ -53,8 +61,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Log in with a Facebook access token' })
   @ApiResponse({ status: 200, description: 'User logged in, tokens returned' })
   @ApiResponse({ status: 401, description: 'Invalid Facebook access token' })
-  async loginWithFacebook(@Body() dto: SocialLoginDto) {
-    const data = await this.authService.loginWithFacebook(dto.token);
+  async loginWithFacebook(
+    @Body() dto: SocialLoginDto,
+    @CurrentTenant() tenant?: TenantContext,
+  ) {
+    const data = await this.authService.loginWithFacebook(dto.token, tenant);
     return { data };
   }
 

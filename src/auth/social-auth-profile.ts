@@ -1,6 +1,6 @@
 export interface SocialAuthProfile {
   providerUserId: string;
-  displayName: string;
+  fullName: string;
   email?: string;
   avatarUrl?: string;
 }

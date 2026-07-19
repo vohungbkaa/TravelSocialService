@@ -11,7 +11,9 @@ async function main() {
   const displayName = process.env.SEED_ADMIN_DISPLAY_NAME || 'Administrator';
 
   if (!email || !username || !password) {
-    console.error('Missing required environment variables for seeding admin user.');
+    console.error(
+      'Missing required environment variables for seeding admin user.',
+    );
     process.exit(1);
   }
 
@@ -55,7 +57,7 @@ async function main() {
         await tx.userProfile.create({
           data: {
             userId: user.id,
-            displayName,
+            fullName: displayName,
           },
         });
       });
