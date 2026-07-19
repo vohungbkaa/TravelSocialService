@@ -255,6 +255,75 @@ describe('AuthController (e2e)', () => {
       });
       expect(user?.email).toBeNull();
     });
+
+    it('should rotate a refresh token issued by Google login', async () => {
+      googleTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'google-refresh-user-id',
+        displayName: 'Google Refresh User',
+        email: 'google-refresh@example.com',
+      });
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ token: 'valid-google-id-token' })
+        .expect(HttpStatus.OK);
+      const oldRefreshToken = loginResponse.body.data.refreshToken;
+      const refreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(HttpStatus.OK);
+
+      expect(refreshResponse.body.data.refreshToken).not.toBe(oldRefreshToken);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(HttpStatus.UNAUTHORIZED);
+
+      const tokens = await prisma.refreshToken.findMany({
+        where: { userId: loginResponse.body.data.user.id },
+        orderBy: { createdAt: 'asc' },
+      });
+      expect(tokens).toHaveLength(2);
+      expect(tokens[0].revokedAt).not.toBeNull();
+      expect(tokens[1].revokedAt).toBeNull();
+      expect(tokens.every((token) => token.tokenHash !== oldRefreshToken)).toBe(
+        true,
+      );
+    });
+
+    it('should rotate a refresh token issued by Facebook login', async () => {
+      facebookTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'facebook-refresh-user-id',
+        displayName: 'Facebook Refresh User',
+      });
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/facebook')
+        .send({ token: 'valid-facebook-access-token' })
+        .expect(HttpStatus.OK);
+      const oldRefreshToken = loginResponse.body.data.refreshToken;
+      const refreshResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(HttpStatus.OK);
+
+      expect(refreshResponse.body.data.refreshToken).not.toBe(oldRefreshToken);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(HttpStatus.UNAUTHORIZED);
+
+      const tokens = await prisma.refreshToken.findMany({
+        where: { userId: loginResponse.body.data.user.id },
+        orderBy: { createdAt: 'asc' },
+      });
+      expect(tokens).toHaveLength(2);
+      expect(tokens[0].revokedAt).not.toBeNull();
+      expect(tokens[1].revokedAt).toBeNull();
+      expect(tokens.every((token) => token.tokenHash !== oldRefreshToken)).toBe(
+        true,
+      );
+    });
   });
 
   describe('POST /api/v1/auth/refresh and /api/v1/auth/logout', () => {

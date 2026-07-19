@@ -195,7 +195,7 @@ export class AuthService {
         const rawToken = crypto.randomUUID();
         const newHash = this.hashToken(rawToken);
         const refreshTtl =
-          this.configService.get<string>('app.jwt.refreshTtl') || '30d';
+          this.configService.getOrThrow<string>('JWT_REFRESH_TTL');
         const expiresAt = this.getExpiryDate(refreshTtl);
 
         await tx.refreshToken.create({
@@ -416,8 +416,7 @@ export class AuthService {
   private async generateAndStoreRefreshToken(userId: string): Promise<string> {
     const rawToken = crypto.randomUUID();
     const hashedToken = this.hashToken(rawToken);
-    const refreshTtl =
-      this.configService.get<string>('app.jwt.refreshTtl') || '30d';
+    const refreshTtl = this.configService.getOrThrow<string>('JWT_REFRESH_TTL');
     const expiresAt = this.getExpiryDate(refreshTtl);
 
     await this.prisma.refreshToken.create({
