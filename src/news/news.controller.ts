@@ -33,7 +33,7 @@ export class NewsController {
   @Post('categories')
   @ApiOperation({ summary: 'Create a new news category' })
   async createCategory(
-    @Body() dto: { name: string; description?: string; sortOrder?: number },
+    @Body() dto: { name: string; description?: string; sortOrder?: number; imageUrl?: string },
     @CurrentTenant() tenant: TenantContext,
   ) {
     const data = await this.newsService.createCategory(dto, tenant);

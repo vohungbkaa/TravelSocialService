@@ -6,21 +6,32 @@ import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
 import { UserStatus, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { GoogleTokenVerifier } from './../src/auth/google-token-verifier.service';
+import { FacebookTokenVerifier } from './../src/auth/facebook-token-verifier.service';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
+  const googleTokenVerifier = { verify: jest.fn() };
+  const facebookTokenVerifier = { verify: jest.fn() };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GoogleTokenVerifier)
+      .useValue(googleTokenVerifier)
+      .overrideProvider(FacebookTokenVerifier)
+      .useValue(facebookTokenVerifier)
+      .compile();
 
     app = moduleFixture.createNestApplication();
 
     // Register pipes and filters
     const { ValidationPipe } = require('@nestjs/common');
-    const { HttpExceptionFilter } = require('./../src/common/filters/http-exception.filter');
+    const {
+      HttpExceptionFilter,
+    } = require('./../src/common/filters/http-exception.filter');
     const { ConfigService } = require('@nestjs/config');
 
     app.useGlobalPipes(
@@ -38,6 +49,7 @@ describe('AuthController (e2e)', () => {
   });
 
   beforeEach(async () => {
+    jest.resetAllMocks();
     // Clean up database tables before each test
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "User" CASCADE;');
     await prisma.$executeRawUnsafe('TRUNCATE TABLE "RefreshToken" CASCADE;');
@@ -73,7 +85,9 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should throw ConflictException on duplicate email', async () => {
-      await request(app.getHttpServer()).post('/api/v1/auth/register').send(validUser);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(validUser);
 
       return request(app.getHttpServer())
         .post('/api/v1/auth/register')
@@ -89,7 +103,9 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should throw ConflictException on duplicate username', async () => {
-      await request(app.getHttpServer()).post('/api/v1/auth/register').send(validUser);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(validUser);
 
       return request(app.getHttpServer())
         .post('/api/v1/auth/register')
@@ -114,6 +130,7 @@ describe('AuthController (e2e)', () => {
       user = await prisma.user.create({
         data: {
           email: 'login@example.com',
+          phone: '+84901234567',
           username: 'loginuser',
           passwordHash,
           status: UserStatus.ACTIVE,
@@ -152,6 +169,16 @@ describe('AuthController (e2e)', () => {
         .expect(HttpStatus.OK);
     });
 
+    it('should login successfully with phone', () => {
+      return request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          identifier: '+84 901 234 567',
+          password,
+        })
+        .expect(HttpStatus.OK);
+    });
+
     it('should fail login with wrong password', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/login')
@@ -183,6 +210,50 @@ describe('AuthController (e2e)', () => {
           expect(res.body.error.code).toBe('FORBIDDEN');
           expect(res.body.error.message).toBe('USER_SUSPENDED');
         });
+    });
+  });
+
+  describe('POST /api/v1/auth/google and /auth/facebook', () => {
+    it('should create and reuse a user authenticated by Google', async () => {
+      googleTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'google-user-id',
+        displayName: 'Google User',
+        email: 'google@example.com',
+        avatarUrl: 'https://example.com/google-avatar.jpg',
+      });
+
+      const firstResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ token: 'valid-google-id-token' })
+        .expect(HttpStatus.OK);
+      const secondResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/google')
+        .send({ token: 'valid-google-id-token' })
+        .expect(HttpStatus.OK);
+
+      expect(firstResponse.body.data).toHaveProperty('accessToken');
+      expect(secondResponse.body.data.user.id).toBe(
+        firstResponse.body.data.user.id,
+      );
+      expect(await prisma.socialAuthIdentity.count()).toBe(1);
+    });
+
+    it('should create a Facebook user when email is unavailable', async () => {
+      facebookTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'facebook-user-id',
+        displayName: 'Facebook User',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/facebook')
+        .send({ token: 'valid-facebook-access-token' })
+        .expect(HttpStatus.OK);
+
+      expect(response.body.data).toHaveProperty('refreshToken');
+      const user = await prisma.user.findUnique({
+        where: { id: response.body.data.user.id },
+      });
+      expect(user?.email).toBeNull();
     });
   });
 

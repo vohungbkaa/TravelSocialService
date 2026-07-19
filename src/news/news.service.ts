@@ -28,7 +28,7 @@ export class NewsService {
   }
 
   async createCategory(
-    dto: { name: string; description?: string; sortOrder?: number },
+    dto: { name: string; description?: string; sortOrder?: number; imageUrl?: string },
     tenant: TenantContext,
   ) {
     return this.prisma.newsCategory.create({
@@ -37,6 +37,7 @@ export class NewsService {
         name: dto.name,
         description: dto.description,
         sortOrder: dto.sortOrder ?? 0,
+        imageUrl: dto.imageUrl || null,
       },
     });
   }

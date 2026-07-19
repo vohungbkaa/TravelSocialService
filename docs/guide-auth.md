@@ -60,7 +60,9 @@ async doAdminWork() {
 | Phương thức | Đường dẫn | Quyền | Mô tả |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/auth/register` | Public | Đăng ký tài khoản người dùng mới |
-| `POST` | `/auth/login` | Public | Đăng nhập bằng `username`/`email` và `password`. Trả về token và thông tin user |
+| `POST` | `/auth/login` | Public | Đăng nhập bằng `phone`/`username`/`email` và `password`. Trả về token và thông tin user |
+| `POST` | `/auth/google` | Public | Xác minh Google ID token, tạo/liên kết tài khoản và trả về token của hệ thống |
+| `POST` | `/auth/facebook` | Public | Xác minh Facebook access token, tạo/liên kết tài khoản và trả về token của hệ thống |
 | `POST` | `/auth/refresh` | Public | Gửi `refreshToken` để lấy lại cặp `accessToken` & `refreshToken` mới |
 | `POST` | `/auth/logout` | Đã đăng nhập | Đăng xuất, hủy bỏ Refresh Token hiện tại trong database |
 | `GET` | `/auth/me` | Đã đăng nhập | Lấy thông tin cá nhân của tài khoản đang đăng nhập |

@@ -10,6 +10,14 @@ export default registerAs('app', () => ({
     accessTtl: process.env.JWT_ACCESS_TTL || '15m',
     refreshTtl: process.env.JWT_REFRESH_TTL || '30d',
   },
+  socialAuth: {
+    googleClientIds: (process.env.GOOGLE_CLIENT_IDS || '')
+      .split(',')
+      .map((clientId) => clientId.trim())
+      .filter(Boolean),
+    facebookAppId: process.env.FACEBOOK_APP_ID || '',
+    facebookAppSecret: process.env.FACEBOOK_APP_SECRET || '',
+  },
   r2: {
     accountId: process.env.R2_ACCOUNT_ID,
     accessKeyId: process.env.R2_ACCESS_KEY_ID,

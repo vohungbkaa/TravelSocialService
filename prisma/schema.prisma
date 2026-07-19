@@ -19,6 +19,11 @@ enum UserRole {
   SUPER_ADMIN
 }
 
+enum SocialAuthProvider {
+  GOOGLE
+  FACEBOOK
+}
+
 enum TenantUserRole {
   OWNER
   ADMIN
@@ -113,6 +118,7 @@ model User {
   deletedAt     DateTime?
   profile       UserProfile?
   refreshTokens RefreshToken[]
+  socialAuthIdentities SocialAuthIdentity[]
   places        Place[]
   tenants       TenantUser[]
   posts         Post[]
@@ -121,6 +127,19 @@ model User {
   commentLikes  CommentLike[]
   postShares    PostShare[]
   shopProducts  ShopProduct[]
+}
+
+model SocialAuthIdentity {
+  id             String             @id @default(uuid())
+  userId         String
+  provider       SocialAuthProvider
+  providerUserId String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
 }
 
 model UserProfile {
@@ -404,6 +423,7 @@ model NewsCategory {
   tenantId    String
   name        String
   description String?
+  imageUrl    String?
   active      Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())

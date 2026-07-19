@@ -1,10 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getRequestedTenantCodes } from './tenant-data-seed-utils';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+const FLUTTER_APP_DIR = path.resolve(
+  process.cwd(),
+  '..',
+  'TravelSocialFlutterApp',
+);
+const SHOP_IMAGE_DIR = path.join(process.cwd(), 'public', 'uploads', 'images');
 
 const SHOP_CATEGORIES = [
   {
@@ -13,23 +21,11 @@ const SHOP_CATEGORIES = [
     sortOrder: 1,
   },
   { name: 'Trái cây', description: 'Trái cây và nông sản tươi', sortOrder: 2 },
-  { name: 'Rau củ', description: 'Rau củ sạch theo mùa', sortOrder: 3 },
-  {
-    name: 'Thảo dược',
-    description: 'Cây thuốc, thảo dược và sản phẩm chăm sóc sức khỏe',
-    sortOrder: 4,
-  },
-  {
-    name: 'Thịt & Trứng',
-    description: 'Sản phẩm chăn nuôi địa phương',
-    sortOrder: 5,
-  },
-  {
-    name: 'Gạo & Ngũ cốc',
-    description: 'Gạo, cốm, ngũ cốc và sản phẩm từ lúa',
-    sortOrder: 6,
-  },
 ];
+
+const ACTIVE_SHOP_CATEGORY_NAMES = SHOP_CATEGORIES.map(
+  (category) => category.name,
+);
 
 const SHOP_PRODUCTS = [
   {
@@ -37,7 +33,7 @@ const SHOP_PRODUCTS = [
     price: 'Giá liên hệ',
     origin: 'Hộ kinh doanh Phương Xứng - Tiến Thắng',
     rating: '5.0',
-    imageUrl: 'assets/nemchua.jpeg',
+    imageAsset: 'nemchua.jpeg',
     category: 'Đặc sản',
     sortOrder: 1,
     description:
@@ -48,7 +44,7 @@ const SHOP_PRODUCTS = [
     price: 'Giá liên hệ',
     origin: 'Thôn Thanh Vân, xã Tiến Thắng',
     rating: '5.0',
-    imageUrl: 'assets/gio.jpeg',
+    imageAsset: 'gio.jpeg',
     category: 'Đặc sản',
     sortOrder: 2,
     description:
@@ -59,7 +55,7 @@ const SHOP_PRODUCTS = [
     price: 'Giá liên hệ',
     origin: 'Xã Tiến Thắng, Mê Linh',
     rating: '5.0',
-    imageUrl: 'assets/dualuoi.jpeg',
+    imageAsset: 'dualuoi.jpeg',
     category: 'Trái cây',
     sortOrder: 3,
     description:
@@ -70,7 +66,7 @@ const SHOP_PRODUCTS = [
     price: 'Giá liên hệ',
     origin: 'Thôn Thanh Vân, xã Tiến Thắng',
     rating: '5.0',
-    imageUrl: 'assets/com.jpeg',
+    imageAsset: 'com.jpeg',
     category: 'Đặc sản',
     sortOrder: 4,
     description:
@@ -110,7 +106,17 @@ async function seedShopForTenant(tenantCode: string) {
     categoriesByName.set(saved.name, saved);
   }
 
+  await prisma.shopCategory.updateMany({
+    where: {
+      tenantId: tenant.id,
+      name: { notIn: ACTIVE_SHOP_CATEGORY_NAMES },
+      active: true,
+    },
+    data: { active: false },
+  });
+
   for (const product of SHOP_PRODUCTS) {
+    const imageUrl = await ensureShopImage(product.imageAsset);
     const category = categoriesByName.get(product.category);
     if (!category) {
       throw new Error(`Missing shop category: ${product.category}`);
@@ -131,7 +137,7 @@ async function seedShopForTenant(tenantCode: string) {
       origin: product.origin,
       rating: product.rating,
       description: product.description,
-      imageUrl: product.imageUrl,
+      imageUrl,
       isOcop: true,
       active: true,
       sortOrder: product.sortOrder,
@@ -146,7 +152,7 @@ async function seedShopForTenant(tenantCode: string) {
         data: {
           ...data,
           images: {
-            create: [{ imageUrl: product.imageUrl, sortOrder: 0 }],
+            create: [{ imageUrl, sortOrder: 0 }],
           },
         },
       });
@@ -155,7 +161,7 @@ async function seedShopForTenant(tenantCode: string) {
         data: {
           ...data,
           images: {
-            create: [{ imageUrl: product.imageUrl, sortOrder: 0 }],
+            create: [{ imageUrl, sortOrder: 0 }],
           },
         },
       });
@@ -163,6 +169,21 @@ async function seedShopForTenant(tenantCode: string) {
 
     console.log(`Shop product ready: ${tenant.code}/${product.name}`);
   }
+}
+
+async function ensureShopImage(imageAsset: string) {
+  const sourcePath = path.join(FLUTTER_APP_DIR, 'assets', imageAsset);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Shop seed image not found: ${sourcePath}`);
+  }
+
+  await fs.promises.mkdir(SHOP_IMAGE_DIR, { recursive: true });
+  const targetFileName = `shop-${imageAsset}`;
+  const targetPath = path.join(SHOP_IMAGE_DIR, targetFileName);
+
+  await fs.promises.copyFile(sourcePath, targetPath);
+
+  return `/media/images/${targetFileName}`;
 }
 
 async function main() {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -208,5 +209,147 @@ export class ShopService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     );
+  }
+
+  async deleteProduct(
+    id: string,
+    user: { userId: string; role?: string },
+    tenant: TenantContext,
+  ): Promise<void> {
+    const product = await this.prisma.shopProduct.findUnique({
+      where: { id },
+    });
+
+    if (!product) {
+      throw new NotFoundException('SHOP_PRODUCT_NOT_FOUND');
+    }
+
+    if (product.tenantId !== tenant.id) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this product',
+      );
+    }
+
+    if (
+      user.role === 'ADMIN' ||
+      user.role === 'SUPER_ADMIN' ||
+      product.createdBy === user.userId
+    ) {
+      await this.prisma.shopProductImage.deleteMany({
+        where: { productId: id },
+      });
+      await this.prisma.shopProduct.delete({
+        where: { id },
+      });
+      return;
+    }
+
+    const tenantUser = await this.prisma.tenantUser.findFirst({
+      where: {
+        tenantId: tenant.id,
+        userId: user.userId,
+        role: { in: ['ADMIN', 'OWNER'] },
+      },
+    });
+
+    if (!tenantUser) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this product',
+      );
+    }
+
+    await this.prisma.shopProductImage.deleteMany({
+      where: { productId: id },
+    });
+    await this.prisma.shopProduct.delete({
+      where: { id },
+    });
+  }
+
+  async updateProduct(
+    id: string,
+    dto: CreateShopProductDto,
+    user: { userId: string; role?: string },
+    tenant: TenantContext,
+  ) {
+    const existingProduct = await this.prisma.shopProduct.findUnique({
+      where: { id },
+    });
+
+    if (!existingProduct) {
+      throw new NotFoundException('SHOP_PRODUCT_NOT_FOUND');
+    }
+
+    if (existingProduct.tenantId !== tenant.id) {
+      throw new ForbiddenException(
+        'You do not have permission to update this product',
+      );
+    }
+
+    let isAllowed =
+      user.role === 'ADMIN' ||
+      user.role === 'SUPER_ADMIN' ||
+      existingProduct.createdBy === user.userId;
+
+    if (!isAllowed) {
+      const tenantUser = await this.prisma.tenantUser.findFirst({
+        where: {
+          tenantId: tenant.id,
+          userId: user.userId,
+          role: { in: ['ADMIN', 'OWNER'] },
+        },
+      });
+      if (tenantUser) {
+        isAllowed = true;
+      }
+    }
+
+    if (!isAllowed) {
+      throw new ForbiddenException(
+        'You do not have permission to update this product',
+      );
+    }
+
+    const imageUrls = dto.imageUrls.map((url) => url.trim()).filter(Boolean);
+    if (imageUrls.length === 0) {
+      throw new BadRequestException('At least one product image is required');
+    }
+
+    const category = dto.categoryId
+      ? await this.prisma.shopCategory.findFirst({
+          where: { id: dto.categoryId, tenantId: tenant.id, active: true },
+        })
+      : await this.findOrCreateCategory(dto.category, tenant.id);
+
+    if (!category) {
+      throw new NotFoundException('SHOP_CATEGORY_NOT_FOUND');
+    }
+
+    await this.prisma.shopProductImage.deleteMany({
+      where: { productId: id },
+    });
+
+    const updated = await this.prisma.shopProduct.update({
+      where: { id },
+      data: {
+        categoryId: category.id,
+        name: dto.name.trim(),
+        price: dto.price.trim(),
+        origin: dto.origin?.trim() || null,
+        description: dto.description.trim(),
+        imageUrl: imageUrls[0],
+        isOcop: dto.isOcop ?? true,
+        sortOrder: dto.sortOrder ?? 0,
+        images: {
+          create: imageUrls.map((imageUrl, index) => ({
+            imageUrl,
+            sortOrder: index,
+          })),
+        },
+      },
+      include: productInclude,
+    });
+
+    return this.toProductResponse(updated);
   }
 }

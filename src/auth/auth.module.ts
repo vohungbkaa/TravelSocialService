@@ -6,6 +6,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '../database/database.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleTokenVerifier } from './google-token-verifier.service';
+import { FacebookTokenVerifier } from './facebook-token-verifier.service';
 
 @Module({
   imports: [
@@ -17,13 +19,19 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('app.jwt.accessSecret'),
         signOptions: {
-          expiresIn: (configService.get<string>('app.jwt.accessTtl') || '15m') as any,
+          expiresIn: (configService.get<string>('app.jwt.accessTtl') ||
+            '15m') as any,
         },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleTokenVerifier,
+    FacebookTokenVerifier,
+  ],
   exports: [JwtStrategy, PassportModule, JwtModule],
 })
 export class AuthModule {}

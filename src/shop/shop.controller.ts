@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -78,5 +78,30 @@ export class ShopController {
   ) {
     const data = await this.shopService.createProduct(dto, user, tenant);
     return { data };
+  }
+
+  @Put('products/:id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update a shop product' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: CreateShopProductDto,
+    @CurrentUser() user: any,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    const data = await this.shopService.updateProduct(id, dto, user, tenant);
+    return { data };
+  }
+
+  @Delete('products/:id')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Delete a shop product' })
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
+    await this.shopService.deleteProduct(id, user, tenant);
+    return { success: true };
   }
 }

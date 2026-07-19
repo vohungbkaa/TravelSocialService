@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { SocialLoginDto } from './dto/social-login.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -32,6 +33,28 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'User suspended' })
   async login(@Body() dto: LoginDto) {
     const data = await this.authService.login(dto);
+    return { data };
+  }
+
+  @Public()
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in with a Google ID token' })
+  @ApiResponse({ status: 200, description: 'User logged in, tokens returned' })
+  @ApiResponse({ status: 401, description: 'Invalid Google ID token' })
+  async loginWithGoogle(@Body() dto: SocialLoginDto) {
+    const data = await this.authService.loginWithGoogle(dto.token);
+    return { data };
+  }
+
+  @Public()
+  @Post('facebook')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in with a Facebook access token' })
+  @ApiResponse({ status: 200, description: 'User logged in, tokens returned' })
+  @ApiResponse({ status: 401, description: 'Invalid Facebook access token' })
+  async loginWithFacebook(@Body() dto: SocialLoginDto) {
+    const data = await this.authService.loginWithFacebook(dto.token);
     return { data };
   }
 

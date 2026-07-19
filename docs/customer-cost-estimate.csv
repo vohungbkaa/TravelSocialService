@@ -1,0 +1,26 @@
+Giai đoạn 1: Pilot rẻ nhất nhưng chạy ổn
+Hạng mục,Dịch vụ/Gói,Chi phí USD/tháng,Quy đổi VND/tháng,Ghi chú,Link nguồn
+Chạy backend,Render Starter,7,182000,"Backend API NestJS","https://render.com/pricing"
+Cơ sở dữ liệu,Neon Free,0,0,"PostgreSQL cho giai đoạn đầu","https://neon.com/pricing"
+Lưu trữ ảnh/video,Cloudflare R2 dưới 10GB,0,0,"Lưu ảnh/video upload","https://developers.cloudflare.com/r2/pricing/"
+DNS/CDN,Cloudflare Free,0,0,"Quản lý domain và CDN","https://www.cloudflare.com/plans/"
+Dự phòng vận hành,"Tỷ giá, request và usage nhỏ",3,78000,"Phần dự phòng phát sinh nhẹ",
+Tổng phí hạ tầng,,10,260000,,
+
+Giai đoạn 2: Một xã dùng thật
+Hạng mục,Dịch vụ/Gói,Chi phí USD/tháng,Quy đổi VND/tháng,Ghi chú,Link nguồn
+Chạy backend,Render Starter,7,182000,"Backend API NestJS","https://render.com/pricing"
+Cơ sở dữ liệu,Neon usage-based,15,390000,"Database bắt đầu có usage trả phí","https://neon.com/pricing"
+Lưu trữ ảnh/video,Cloudflare R2 10-100GB,2,52000,"Media tăng lên theo số người dùng","https://developers.cloudflare.com/r2/pricing/"
+DNS/CDN,Cloudflare Free,0,0,"Quản lý domain và CDN","https://www.cloudflare.com/plans/"
+Dự phòng vận hành,"Tỷ giá, query tăng và media tăng nhẹ",6,156000,"Phần dự phòng phát sinh nhẹ",
+Tổng phí hạ tầng,,30,780000,,
+
+Giai đoạn 3: Vận hành ổn định
+Hạng mục,Dịch vụ/Gói,Chi phí USD/tháng,Quy đổi VND/tháng,Ghi chú,Link nguồn
+Chạy backend,Render Standard,25,650000,"Backend API hiệu năng cao hơn","https://render.com/pricing"
+Cơ sở dữ liệu,Neon paid/always-on nhỏ,25,650000,"Database ổn định hơn cho vận hành chính thức","https://neon.com/pricing"
+Lưu trữ ảnh/video,Cloudflare R2 100-500GB,8,208000,"Media nhiều hơn","https://developers.cloudflare.com/r2/pricing/"
+DNS/CDN,Cloudflare Free,0,0,"Quản lý domain và CDN","https://www.cloudflare.com/plans/"
+Dự phòng vận hành,"Tỷ giá, database usage, media và logs",12,312000,"Phần dự phòng phát sinh nhẹ",
+Tổng phí hạ tầng,,70,1820000,,
