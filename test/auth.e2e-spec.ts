@@ -313,6 +313,52 @@ describe('AuthController (e2e)', () => {
       expect(membership?.role).toBe('VIEWER');
     });
 
+    it('should preserve a customized profile on Facebook re-login', async () => {
+      facebookTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'facebook-custom-profile-id',
+        fullName: 'Facebook Name',
+        email: 'facebook-custom@example.com',
+        avatarUrl: 'https://facebook.example.com/avatar.jpg',
+      });
+
+      const firstLogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/facebook')
+        .send({ token: 'valid-facebook-access-token' })
+        .expect(HttpStatus.OK);
+
+      await request(app.getHttpServer())
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstLogin.body.data.accessToken}`)
+        .send({
+          fullName: 'Tên đã tùy chỉnh',
+          avatarUrl: '/uploads/custom-facebook-avatar.jpg',
+        })
+        .expect(HttpStatus.OK);
+
+      facebookTokenVerifier.verify.mockResolvedValue({
+        providerUserId: 'facebook-custom-profile-id',
+        fullName: 'Facebook Name Changed',
+        email: 'facebook-custom@example.com',
+        avatarUrl: 'https://facebook.example.com/new-avatar.jpg',
+      });
+
+      const secondLogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/facebook')
+        .send({ token: 'another-valid-facebook-access-token' })
+        .expect(HttpStatus.OK);
+
+      expect(secondLogin.body.data.user.id).toBe(firstLogin.body.data.user.id);
+      expect(secondLogin.body.data.user.fullName).toBe('Tên đã tùy chỉnh');
+
+      const profile = await prisma.userProfile.findUnique({
+        where: { userId: firstLogin.body.data.user.id },
+      });
+      expect(profile?.fullName).toBe('Tên đã tùy chỉnh');
+      expect(profile?.avatarMediaId).toBe(
+        '/uploads/custom-facebook-avatar.jpg',
+      );
+    });
+
     it('should rotate a refresh token issued by Google login', async () => {
       googleTokenVerifier.verify.mockResolvedValue({
         providerUserId: 'google-refresh-user-id',

@@ -166,8 +166,12 @@ export class AuthService {
     );
   }
 
-  async loginWithFacebook(accessToken: string, tenant?: TenantContext) {
-    const profile = await this.facebookTokenVerifier.verify(accessToken);
+  async loginWithFacebook(
+    accessToken: string,
+    tenant?: TenantContext,
+    nonce?: string,
+  ) {
+    const profile = await this.facebookTokenVerifier.verify(accessToken, nonce);
     return this.loginWithSocialProfile(
       SocialAuthProvider.FACEBOOK,
       profile,
@@ -433,10 +437,10 @@ export class AuthService {
                 fullName: profile.fullName,
                 avatarMediaId: profile.avatarUrl,
               },
-              update: {
-                fullName: profile.fullName,
-                ...(profile.avatarUrl && { avatarMediaId: profile.avatarUrl }),
-              },
+              // Social provider data is only the initial profile seed. Keep
+              // the name and avatar that the user customized in the app on
+              // subsequent Google/Facebook logins.
+              update: {},
             },
           },
         },

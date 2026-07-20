@@ -9,8 +9,8 @@ export default registerAs('app', () => ({
       .split(',')
       .map((clientId) => clientId.trim())
       .filter(Boolean),
-    facebookAppId: process.env.FACEBOOK_APP_ID || '',
-    facebookAppSecret: process.env.FACEBOOK_APP_SECRET || '',
+    facebookAppId: process.env.FACEBOOK_APP_ID?.trim() || '',
+    facebookAppSecret: process.env.FACEBOOK_APP_SECRET?.trim() || '',
   },
   r2: {
     accountId: process.env.R2_ACCOUNT_ID,

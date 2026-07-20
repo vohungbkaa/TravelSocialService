@@ -65,7 +65,11 @@ export class AuthController {
     @Body() dto: SocialLoginDto,
     @CurrentTenant() tenant?: TenantContext,
   ) {
-    const data = await this.authService.loginWithFacebook(dto.token, tenant);
+    const data = await this.authService.loginWithFacebook(
+      dto.token,
+      tenant,
+      dto.nonce,
+    );
     return { data };
   }
 
